@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
+import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
+import { PushNotificationPrompt } from '@/components/push-notification-prompt';
+import { NotificationSoundListener } from '@/components/notification-sound-listener';
 import './globals.css';
 
 const geistSans = Geist({
@@ -21,6 +24,45 @@ export const metadata: Metadata = {
 	},
 	description:
 		'Trend Pulse is a minimalist, reader-first blog delivering fresh, well-researched stories from real-time trends.',
+	applicationName: 'Trend Pulse',
+	generator: 'Next.js',
+	keywords: [
+		'trends',
+		'news',
+		'blog',
+		'trending',
+		'stories',
+		'trndzz',
+		'nigeria',
+	],
+	authors: [{ name: 'Trend Pulse' }],
+	creator: 'Trend Pulse',
+	publisher: 'Trend Pulse',
+	formatDetection: {
+		email: false,
+		address: false,
+		telephone: false,
+	},
+	icons: {
+		icon: [
+			{ url: '/favicon.ico', sizes: 'any' },
+			{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+			{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+		],
+		apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+		other: [
+			{
+				rel: 'mask-icon',
+				url: '/android-chrome-192x192.png',
+			},
+		],
+	},
+	manifest: '/manifest.webmanifest',
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: 'default',
+		title: 'Trend Pulse',
+	},
 };
 
 export default function RootLayout({
@@ -35,6 +77,9 @@ export default function RootLayout({
 			>
 				<PostHogProvider>
 					{children}
+					<PWAInstallPrompt />
+					<PushNotificationPrompt />
+					<NotificationSoundListener />
 					<Toaster richColors />
 				</PostHogProvider>
 			</body>

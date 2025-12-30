@@ -4,6 +4,7 @@ import {
 	getTokenFromRequest,
 	verifySessionToken,
 } from '../../../../lib/adminSession';
+import { notifyNewPost } from '@/lib/push-notifications';
 
 export async function POST(req: Request) {
 	const token = getTokenFromRequest(req);
@@ -18,5 +19,16 @@ export async function POST(req: Request) {
 		where: { id: postId },
 		data: { status: 'published', publishedAt: new Date() },
 	});
+
+	// Send push notification for new post (fire and forget)
+	notifyNewPost({
+		title: p.title,
+		slug: p.slug,
+		excerpt: p.excerpt,
+		featuredImageUrl: p.featuredImageUrl,
+	}).catch((error) => {
+		console.error('Failed to send push notification:', error);
+	});
+
 	return NextResponse.json({ ok: true, post: p });
 }

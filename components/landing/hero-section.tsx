@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PushNotificationButton } from '@/components/push-notification-button';
 
 interface HeroSectionProps {
 	totalStories: number;
@@ -14,17 +15,20 @@ export function HeroSection({ totalStories }: HeroSectionProps) {
 			<div className='relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24'>
 				<div className='max-w-3xl space-y-6'>
 					{/* Logo / Brand */}
-					<Link
-						href='/'
-						className='inline-flex items-center gap-3 group'
-					>
-						<div className='flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-background font-bold text-lg transition-transform group-hover:scale-105'>
-							TP
-						</div>
-						<span className='text-sm font-medium tracking-wide text-muted-foreground uppercase'>
-							Trend Pulse
-						</span>
-					</Link>
+					<div className='flex items-center justify-between'>
+						<Link
+							href='/'
+							className='inline-flex items-center gap-3 group'
+						>
+							<div className='flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-background font-bold text-lg transition-transform group-hover:scale-105'>
+								TP
+							</div>
+							<span className='text-sm font-medium tracking-wide text-muted-foreground uppercase'>
+								Trend Pulse
+							</span>
+						</Link>
+						<PushNotificationButton />
+					</div>
 
 					{/* Tagline */}
 					<h1 className='text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl'>
