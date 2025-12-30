@@ -63,6 +63,9 @@ export const metadata: Metadata = {
 		statusBarStyle: 'default',
 		title: 'Trend Pulse',
 	},
+	other: {
+		'google-adsense-account': 'ca-pub-2109983496009042',
+	},
 };
 
 export default function RootLayout({
