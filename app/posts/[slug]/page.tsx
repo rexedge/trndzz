@@ -96,6 +96,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 		(k, i, arr) => arr.indexOf(k) === i
 	); // dedupe
 
+	// Ensure absolute URLs for images
+	const getAbsoluteUrl = (url: string | null) => {
+		if (!url) return null;
+		if (url.startsWith('http://') || url.startsWith('https://')) {
+			return url;
+		}
+		return `${siteUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+	};
+
+	const imageUrl = getAbsoluteUrl(post.featuredImageUrl);
+
 	return {
 		title: `${post.title} | Trend Pulse`,
 		description,
@@ -114,13 +125,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 			publishedTime: post.publishedAt?.toISOString(),
 			modifiedTime: post.updatedAt?.toISOString(),
 			tags: post.tags,
-			images: post.featuredImageUrl
+			images: imageUrl
 				? [
 						{
-							url: post.featuredImageUrl,
+							url: imageUrl,
 							alt: post.featuredImageAlt || post.title,
 							width: 1200,
 							height: 630,
+							type: 'image/jpeg',
 						},
 				  ]
 				: [],
@@ -129,7 +141,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 			card: 'summary_large_image',
 			title: post.title,
 			description,
-			images: post.featuredImageUrl ? [post.featuredImageUrl] : [],
+			images: imageUrl ? [imageUrl] : [],
+			creator: '@trendpulse',
+			site: '@trendpulse',
 		},
 		robots: {
 			index: true,
