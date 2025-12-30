@@ -57,7 +57,7 @@ function getSummary(content: string, excerpt?: string | null) {
 	return plainText.slice(0, 160) + '…';
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://trendpulse.ng';
+const siteUrl = process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://trendpulse.ng';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params;
