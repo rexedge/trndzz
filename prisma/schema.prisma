@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+}
+
+model Trend {
+  id         String   @id @default(cuid())
+  provider   String   // 'google', 'manual', etc.
+  identifier String   // Unique identifier from provider
+  title      String
+  metadata   Json?    // Additional trend data
+  fetchedAt  DateTime @default(now())
+  posts      Post[]
+
+  @@unique([provider, identifier])
+  @@index([fetchedAt])
+}
+
+model Post {
+  id                   String   @id @default(cuid())
+  title                String
+  slug                 String   @unique
+  content              String   @db.Text
+  excerpt              String?
+  status               String   @default("draft") // 'draft', 'scheduled', 'published'
+  tags                 String[] @default([])
+
+  // Featured image fields
+  featuredImageUrl     String?
+  featuredImageAlt     String?
+  featuredImageCredit  String?
+  featuredImagePrompt  String?  // AI prompt used to find the image
+
+  // SEO and metadata
+  metaDescription      String?
+  relatedQueries       String[] @default([]) // Related search queries for SEO
+
+  // Relationships
+  generatedFromTrendId String?
+  trend                Trend?      @relation(fields: [generatedFromTrendId], references: [id], onDelete: SetNull)
+  images               PostImage[]
+
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  scheduledAt          DateTime?
+  publishedAt          DateTime?
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([createdAt])
+}
+
+model PostImage {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  caption   String?
+  credit    String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  trendId    String?
+  status     String    @default("pending") // 'pending', 'processing', 'completed', 'failed'
+  logs       String?   @db.Text
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([status])
+}
