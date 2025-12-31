@@ -1,8 +1,7 @@
-import OpenAI from 'openai';
+import { getOpenAIModel, getOptionalSamplingParams } from '../openai-model';
+import { getOpenAIClient } from '../openai-client';
 
-const client = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenAIClient();
 
 export interface ContentGenerationResult {
 	success: boolean;
@@ -82,14 +81,15 @@ Your output must be a JSON object with these exact keys:
 			targetWords
 		);
 
+		const model = getOpenAIModel();
 		const response = await client.chat.completions.create({
-			model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+			model,
 			messages: [
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userPrompt },
 			],
-			max_tokens: 4000,
-			temperature: 0.7,
+			max_completion_tokens: 4000,
+			...getOptionalSamplingParams({ model, temperature: 0.7 }),
 		});
 
 		const rawContent = response.choices?.[0]?.message?.content ?? '';
@@ -281,14 +281,15 @@ export async function refineArticleContent(
 
 		const userPrompt = `Please refine the following article based on these instructions: ${refinementInstructions}\n\nCurrent Article:\n${currentContent}\n\nReturn the refined content as a JSON object with: title, slug, content, excerpt, tags, featuredImagePrompt`;
 
+		const model = getOpenAIModel();
 		const response = await client.chat.completions.create({
-			model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+			model,
 			messages: [
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userPrompt },
 			],
-			max_tokens: 4000,
-			temperature: 0.5,
+			max_completion_tokens: 4000,
+			...getOptionalSamplingParams({ model, temperature: 0.5 }),
 		});
 
 		const rawContent = response.choices?.[0]?.message?.content ?? '';

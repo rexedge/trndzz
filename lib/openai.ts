@@ -1,6 +1,6 @@
-import OpenAI from 'openai';
+import { getOpenAIClient } from './openai-client';
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = getOpenAIClient();
 
 function extractJSON(text: string) {
 	// Try to find a ```json ... ``` block first
@@ -46,7 +46,7 @@ export async function generatePostFromTrend({
 			{ role: 'system', content: system },
 			{ role: 'user', content: user },
 		],
-		max_tokens: 3500,
+		max_completion_tokens: 3500,
 	});
 
 	const text = resp.choices?.[0]?.message?.content ?? '';

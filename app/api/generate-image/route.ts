@@ -4,10 +4,11 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { verifySessionToken, getTokenFromCookies } from '@/lib/auth/session';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 export const runtime = 'nodejs';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = getOpenAIClient();
 
 export async function POST(request: NextRequest) {
 	try {

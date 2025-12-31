@@ -1,8 +1,7 @@
-import OpenAI from 'openai';
+import { getOpenAIModel, getOptionalSamplingParams } from '../openai-model';
+import { getOpenAIClient } from '../openai-client';
 
-const client = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenAIClient();
 
 export interface WebSearchResult {
 	success: boolean;
@@ -57,19 +56,18 @@ Be thorough but concise. Focus on Nigerian and African perspectives when relevan
 			? `Research and provide comprehensive information about: "${query}"\n\nAdditional context: ${context}\n\nProvide detailed, factual information that would be useful for writing a news article.`
 			: `Research and provide comprehensive information about: "${query}"\n\nProvide detailed, factual information that would be useful for writing a news article.`;
 
+		const model = getOpenAIModel();
 		const response = await client.chat.completions.create({
-			model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+			model,
 			messages: [
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userPrompt },
 			],
-			max_tokens: 2000,
-			temperature: 0.7,
+			max_completion_tokens: 2000,
+			...getOptionalSamplingParams({ model, temperature: 0.7 }),
 		});
 
 		const content = response.choices?.[0]?.message?.content ?? '';
-
-		// Extract insights from the response
 		const insights = extractInsights(content);
 
 		return {

@@ -403,7 +403,7 @@ export function AdminClient({ initialAuthed, initialDrafts }: Props) {
 							Upload CSV → Generate Draft → Add Images → Publish
 						</p>
 					</div>
-					<div className='flex gap-2'>
+					<div className='flex flex-wrap gap-2'>
 						<Button
 							variant='outline'
 							asChild
@@ -415,6 +415,12 @@ export function AdminClient({ initialAuthed, initialDrafts }: Props) {
 							asChild
 						>
 							<Link href='/admin/posts'>Published Posts</Link>
+						</Button>
+						<Button
+							variant='outline'
+							asChild
+						>
+							<Link href='/admin/seo'>SEO Center</Link>
 						</Button>
 						<Button
 							variant='outline'

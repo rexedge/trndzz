@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { verifySessionToken, getTokenFromCookies } from '@/lib/auth/session';
+import { getOpenAIModel, getOptionalSamplingParams } from '@/lib/openai-model';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 export const runtime = 'nodejs';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = getOpenAIClient();
 
 export async function POST(request: NextRequest) {
 	try {
@@ -54,8 +55,9 @@ Important guidelines:
 - Consider Nigerian/African audience if content is region-specific
 - Include trending search terms where relevant`;
 
+		const model = getOpenAIModel();
 		const response = await openai.chat.completions.create({
-			model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+			model,
 			messages: [
 				{
 					role: 'system',
@@ -64,27 +66,36 @@ Important guidelines:
 				},
 				{ role: 'user', content: prompt },
 			],
-			max_tokens: 1500,
-			temperature: 0.7,
+			max_completion_tokens: 1500,
+			...getOptionalSamplingParams({ model }),
+			response_format: { type: 'json_object' },
 		});
 
-		const text = response.choices?.[0]?.message?.content ?? '';
-
-		// Parse JSON response
-		let seoData;
-		try {
-			// Try to extract JSON from the response
-			const jsonMatch = text.match(/\{[\s\S]*\}/);
-			if (jsonMatch) {
-				seoData = JSON.parse(jsonMatch[0]);
-			} else {
-				throw new Error('No JSON found in response');
-			}
-		} catch {
+		const responseContent = response.choices[0]?.message?.content;
+		if (!responseContent) {
 			return NextResponse.json(
-				{ success: false, message: 'Failed to parse SEO data' },
+				{ success: false, message: 'No response from OpenAI' },
 				{ status: 500 }
 			);
+		}
+
+		let seoData: any;
+		try {
+			// First try to parse as-is (should work with json_object response_format)
+			seoData = JSON.parse(responseContent);
+		} catch {
+			// Fallback: try to extract JSON from markdown
+			const jsonMatch = responseContent.match(
+				/```(?:json)?\s*(\{[\s\S]*?\})\s*```/
+			);
+			if (jsonMatch) {
+				seoData = JSON.parse(jsonMatch[1]);
+			} else {
+				return NextResponse.json(
+					{ success: false, message: 'Failed to parse SEO data' },
+					{ status: 500 }
+				);
+			}
 		}
 
 		return NextResponse.json({

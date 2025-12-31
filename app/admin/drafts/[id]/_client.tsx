@@ -234,11 +234,8 @@ export function DraftEditorClient({ draft }: DraftEditorClientProps) {
 			return;
 		}
 
-		// Validate file size (max 5MB)
-		if (file.size > 5 * 1024 * 1024) {
-			toast.error('Image must be less than 5MB');
-			return;
-		}
+		// Note: Size validation happens after compression on server
+		// Max 5MB after WebP compression
 
 		setIsUploading(true);
 
@@ -253,11 +250,11 @@ export function DraftEditorClient({ draft }: DraftEditorClientProps) {
 				body: formData,
 			});
 
-			if (!uploadRes.ok) {
-				throw new Error('Upload failed');
-			}
-
 			const uploadData = await uploadRes.json();
+
+			if (!uploadRes.ok) {
+				throw new Error(uploadData.message || 'Upload failed');
+			}
 
 			// Add to post - url is in data.url from the API response
 			const result = await addImageToPostAction({
@@ -273,7 +270,11 @@ export function DraftEditorClient({ draft }: DraftEditorClientProps) {
 				toast.error(result.message);
 			}
 		} catch (error) {
-			toast.error('Failed to upload image');
+			toast.error(
+				error instanceof Error
+					? error.message
+					: 'Failed to upload image'
+			);
 		} finally {
 			setIsUploading(false);
 			// Reset input

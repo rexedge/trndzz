@@ -46,6 +46,12 @@ model Post {
   // SEO and metadata
   metaDescription      String?
   relatedQueries       String[] @default([]) // Related search queries for SEO
+  focusKeyword         String?  // Primary SEO keyword
+  secondaryKeywords    String[] @default([]) // Secondary keywords
+
+  // Category (for topic clusters)
+  categoryId           String?
+  category             Category? @relation("PostCategory", fields: [categoryId], references: [id], onDelete: SetNull)
 
   // Relationships
   generatedFromTrendId String?
@@ -61,6 +67,7 @@ model Post {
   @@index([status])
   @@index([publishedAt])
   @@index([createdAt])
+  @@index([categoryId])
 }
 
 model PostImage {
@@ -98,4 +105,179 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([createdAt])
+}
+
+// ============================================
+// SEO & Content Strategy Models
+// ============================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Technology & AI"
+  slug        String   @unique // e.g., "technology"
+  description String?  @db.Text
+  color       String?  // For UI display (hex color)
+  icon        String?  // Icon name
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // Hub page SEO
+  hubTitle         String?
+  hubDescription   String? @db.Text
+  hubMetaDescription String?
+
+  posts       Post[]   @relation("PostCategory")
+  keywords    Keyword[]
+  contentPlans ContentPlan[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+}
+
+model Keyword {
+  id            String   @id @default(cuid())
+  keyword       String   // The actual keyword/phrase
+  searchVolume  Int?     // Estimated monthly searches
+  difficulty    Int?     // 0-100 difficulty score
+  intent        String?  // informational, navigational, transactional, commercial
+  priority      String   @default("medium") // high, medium, low
+  status        String   @default("research") // research, targeting, ranking, achieved
+
+  // Clustering
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Tracking
+  currentRank   Int?     // Current Google ranking position
+  targetPostId  String?  // Post targeting this keyword
+
+  notes         String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([keyword, categoryId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([priority])
+}
+
+model ContentPlan {
+  id            String   @id @default(cuid())
+  title         String   // Planned title
+  targetKeyword String?  // Primary keyword to target
+  secondaryKeywords String[] @default([]) // Secondary keywords
+  searchIntent  String?  // informational, navigational, transactional, commercial
+  contentType   String   @default("post") // post, hub, evergreen, news
+
+  // Category
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Planning details
+  outline       String?  @db.Text // Content outline/brief
+  targetWordCount Int?
+  internalLinks String[] @default([]) // Slugs of posts to link to
+  competitors   String[] @default([]) // Competitor URLs to beat
+
+  // Status tracking
+  status        String   @default("idea") // idea, planned, writing, review, published
+  priority      String   @default("high") // high, medium, low
+  dueDate       DateTime?
+
+  // After publishing
+  publishedPostId String? @unique
+
+  notes         String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([categoryId])
+}
+
+model SeoChecklist {
+  id        String   @id @default(cuid())
+  postId    String   @unique
+
+  // On-page SEO checks
+  hasMetaDescription    Boolean @default(false)
+  hasFocusKeyword       Boolean @default(false)
+  keywordInTitle        Boolean @default(false)
+  keywordInFirstPara    Boolean @default(false)
+  hasInternalLinks      Boolean @default(false)
+  hasExternalLinks      Boolean @default(false)
+  hasImages             Boolean @default(false)
+  imagesHaveAlt         Boolean @default(false)
+
+  // Content quality
+  wordCount             Int?
+  readabilityScore      Int?
+
+  // Tracking
+  focusKeyword          String?
+  internalLinksCount    Int     @default(0)
+  externalLinksCount    Int     @default(0)
+
+  lastChecked           DateTime @default(now())
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ============================================
+// Weekly Content Calendar
+// ============================================
+
+model ContentCalendar {
+  id          String   @id @default(cuid())
+  weekStart   DateTime // Start of the week (e.g., Monday)
+  weekEnd     DateTime // End of the week (e.g., Sunday)
+  name        String?  // Optional name, e.g., "Week 1 - January 2025"
+
+  items       ContentCalendarItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([weekStart])
+  @@index([createdAt])
+}
+
+model ContentCalendarItem {
+  id            String   @id @default(cuid())
+  calendarId    String
+  calendar      ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  // Content details (from AI generation)
+  day           String   // Monday, Tuesday, etc.
+  title         String
+  targetKeyword String?
+  contentType   String?  // evergreen, trending, news, listicle, how-to
+  category      String?
+  priority      String   @default("medium") // high, medium, low
+  estimatedTime String?
+  notes         String?  @db.Text
+
+  // Task tracking
+  isCompleted   Boolean  @default(false)
+  completedAt   DateTime?
+
+  // Link to actual post if created
+  postId        String?  @unique
+
+  order         Int      @default(0) // For ordering within a day
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([calendarId])
+  @@index([day])
+  @@index([isCompleted])
 }

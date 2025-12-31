@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { verifySessionToken, getTokenFromCookies } from '@/lib/auth/session';
+import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 
-// Max file size: 5MB
+// Max file size after compression: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -53,36 +54,40 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate file size
-		if (file.size > MAX_FILE_SIZE) {
+		// Convert file to buffer
+		const bytes = await file.arrayBuffer();
+		const originalBuffer = Buffer.from(bytes);
+
+		// Compress and convert to WebP
+		const compressedBuffer = await sharp(originalBuffer)
+			.webp({ quality: 85 }) // High quality WebP compression
+			.toBuffer();
+
+		// Validate compressed file size
+		if (compressedBuffer.length > MAX_FILE_SIZE) {
 			return NextResponse.json(
 				{
 					success: false,
-					message: 'File too large. Maximum size: 5MB',
+					message: 'Compressed file too large. Maximum size: 5MB',
 				},
 				{ status: 400 }
 			);
 		}
 
-		// Generate unique filename using slug + timestamp
+		// Generate unique filename using slug + timestamp (always .webp)
 		const timestamp = Date.now();
-		const extension = file.name.split('.').pop() || 'jpg';
 		const slugPart = slug
 			? slug.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
 			: 'image';
-		const filename = `${slugPart}-${timestamp}.${extension}`;
+		const filename = `${slugPart}-${timestamp}.webp`;
 		const key = `${FOLDER_NAME}/${filename}`;
-
-		// Convert file to buffer
-		const bytes = await file.arrayBuffer();
-		const buffer = Buffer.from(bytes);
 
 		// Upload to S3/DigitalOcean Spaces
 		const command = new PutObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: key,
-			Body: buffer,
-			ContentType: file.type,
+			Body: compressedBuffer,
+			ContentType: 'image/webp',
 			ACL: 'public-read',
 		});
 
@@ -99,8 +104,13 @@ export async function POST(request: NextRequest) {
 			data: {
 				url,
 				filename,
-				size: file.size,
-				type: file.type,
+				size: compressedBuffer.length,
+				type: 'image/webp',
+				originalSize: file.size,
+				compressionRatio:
+					((1 - compressedBuffer.length / file.size) * 100).toFixed(
+						2
+					) + '%',
 			},
 		});
 	} catch (error) {
