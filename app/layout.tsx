@@ -85,10 +85,21 @@ export default function RootLayout({
 					crossOrigin='anonymous'
 					strategy='afterInteractive'
 				/>
+				<Script
+					async
+					custom-element='amp-auto-ads'
+					src='https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js'
+					strategy='afterInteractive'
+				/>
 			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
+				{/* @ts-expect-error AMP custom element */}
+				<amp-auto-ads
+					type='adsense'
+					data-ad-client='ca-pub-2109983496009042'
+				/>
 				<PostHogProvider>
 					<Navbar />
 					{children}
