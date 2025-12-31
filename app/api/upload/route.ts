@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { verifySessionToken, getTokenFromCookies } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
@@ -9,6 +7,18 @@ export const runtime = 'nodejs';
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+// Initialize S3 client for DigitalOcean Spaces (S3-compatible)
+const s3Client = new S3Client({
+	region: process.env.AWS_REGION || 'us-east-1',
+	credentials: {
+		accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+	},
+});
+
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'isce-image-uploader';
+const FOLDER_NAME = 'trndzz';
 
 export async function POST(request: NextRequest) {
 	try {
@@ -23,6 +33,7 @@ export async function POST(request: NextRequest) {
 
 		const formData = await request.formData();
 		const file = formData.get('file') as File | null;
+		const slug = formData.get('slug') as string | null;
 
 		if (!file) {
 			return NextResponse.json(
@@ -53,26 +64,34 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Create uploads directory if it doesn't exist
-		const uploadsDir = join(process.cwd(), 'public', 'uploads');
-		if (!existsSync(uploadsDir)) {
-			await mkdir(uploadsDir, { recursive: true });
-		}
-
-		// Generate unique filename
+		// Generate unique filename using slug + timestamp
 		const timestamp = Date.now();
-		const randomStr = Math.random().toString(36).substring(2, 8);
 		const extension = file.name.split('.').pop() || 'jpg';
-		const filename = `${timestamp}-${randomStr}.${extension}`;
-		const filepath = join(uploadsDir, filename);
+		const slugPart = slug
+			? slug.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
+			: 'image';
+		const filename = `${slugPart}-${timestamp}.${extension}`;
+		const key = `${FOLDER_NAME}/${filename}`;
 
-		// Write file to disk
+		// Convert file to buffer
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
-		await writeFile(filepath, buffer);
 
-		// Return the public URL
-		const url = `/uploads/${filename}`;
+		// Upload to S3/DigitalOcean Spaces
+		const command = new PutObjectCommand({
+			Bucket: BUCKET_NAME,
+			Key: key,
+			Body: buffer,
+			ContentType: file.type,
+			ACL: 'public-read',
+		});
+
+		await s3Client.send(command);
+
+		// Generate public URL
+		const url = `https://${BUCKET_NAME}.s3.${
+			process.env.AWS_REGION || 'us-east-1'
+		}.amazonaws.com/${key}`;
 
 		return NextResponse.json({
 			success: true,

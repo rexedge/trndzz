@@ -246,6 +246,7 @@ export function DraftEditorClient({ draft }: DraftEditorClientProps) {
 			// Upload to server
 			const formData = new FormData();
 			formData.append('file', file);
+			formData.append('slug', draft.slug);
 
 			const uploadRes = await fetch('/api/upload', {
 				method: 'POST',

@@ -266,6 +266,7 @@ export function AdminClient({ initialAuthed, initialDrafts }: Props) {
 		try {
 			const formData = new FormData();
 			formData.append('file', file);
+			formData.append('slug', editingDraft.slug);
 
 			const uploadRes = await fetch('/api/upload', {
 				method: 'POST',
