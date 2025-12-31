@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { PushNotificationButton } from '@/components/push-notification-button';
+import { PushNotificationButton } from './push-notification-button';
 
-interface HeroSectionProps {
-	totalStories: number;
+interface NavbarProps {
+	totalStories?: number;
 }
 
-export function HeroSection({ totalStories }: HeroSectionProps) {
+export function Navbar({ totalStories }: NavbarProps) {
 	return (
 		<header className='border-b border-border bg-background sticky top-0 z-50'>
 			{/* Top Bar */}
@@ -58,10 +58,14 @@ export function HeroSection({ totalStories }: HeroSectionProps) {
 					>
 						All Stories
 					</Link>
-					<div className='ml-auto flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap'>
-						<span className='font-semibold'>{totalStories}</span>
-						<span>stories</span>
-					</div>
+					{totalStories && (
+						<div className='ml-auto flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap'>
+							<span className='font-semibold'>
+								{totalStories}
+							</span>
+							<span>stories</span>
+						</div>
+					)}
 				</nav>
 			</div>
 		</header>

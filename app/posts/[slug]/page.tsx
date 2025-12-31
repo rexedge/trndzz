@@ -9,6 +9,7 @@ import { Markdown } from '@/components/markdown';
 import { SocialShare } from '@/components/social-share';
 import { PostSlideshow } from '@/components/post-slideshow';
 import { getTokenFromCookies, verifySessionToken } from '@/lib/auth/session';
+import { Ad } from '@/components/ads';
 
 /**
  * Article Page - Single Blog Post
@@ -327,10 +328,22 @@ export default async function PostPage({ params }: Props) {
 						/>
 					)}
 
+					{/* Ad Slot - Before Content */}
+					<Ad
+						format='horizontal'
+						className='my-8'
+					/>
+
 					{/* Content */}
 					<div className='prose prose-lg max-w-none dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/90 prose-a:text-foreground prose-a:underline prose-a:decoration-muted-foreground prose-a:underline-offset-4 hover:prose-a:decoration-foreground prose-strong:text-foreground prose-code:text-foreground prose-pre:bg-muted'>
 						<Markdown content={post.content} />
 					</div>
+
+					{/* Ad Slot - After Content */}
+					<Ad
+						format='in-article'
+						className='my-8'
+					/>
 
 					{/* Footer */}
 					<footer className='mt-12 space-y-8'>

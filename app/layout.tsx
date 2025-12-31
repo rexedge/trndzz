@@ -6,7 +6,9 @@ import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 import { PushNotificationPrompt } from '@/components/push-notification-prompt';
 import { NotificationSoundListener } from '@/components/notification-sound-listener';
+import { Navbar } from '@/components/navbar';
 import './globals.css';
+import { Footer } from '@/components/landing';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -88,7 +90,9 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<PostHogProvider>
+					<Navbar />
 					{children}
+					<Footer />
 					<PWAInstallPrompt />
 					<PushNotificationPrompt />
 					<NotificationSoundListener />

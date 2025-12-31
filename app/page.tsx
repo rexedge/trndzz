@@ -1,12 +1,14 @@
 import { prisma } from '@/lib/prisma/client';
 import {
-	HeroSection,
 	FeaturedPost,
 	PostGrid,
 	EmptyState,
 	Pagination,
+	TopicsSection,
+	TagsSection,
 	Footer,
 } from '@/components/landing';
+import { Ad } from '@/components/ads';
 
 const PAGE_SIZE = 9;
 
@@ -31,7 +33,7 @@ export default async function Home({
 		Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
 	const skip = (page - 1) * PAGE_SIZE;
 
-	const [posts, total] = await Promise.all([
+	const [posts, total, categories, tagData] = await Promise.all([
 		prisma.post.findMany({
 			where: { status: 'published' },
 			orderBy: { publishedAt: 'desc' },
@@ -39,6 +41,42 @@ export default async function Home({
 			skip,
 		}),
 		prisma.post.count({ where: { status: 'published' } }),
+		// Get active categories with post counts
+		prisma.category.findMany({
+			where: { isActive: true },
+			include: {
+				_count: {
+					select: {
+						posts: {
+							where: { status: 'published' },
+						},
+					},
+				},
+			},
+			orderBy: { order: 'asc' },
+			take: 6,
+		}),
+		// Get tags from published posts
+		prisma.post
+			.findMany({
+				where: {
+					status: 'published',
+					tags: { isEmpty: false },
+				},
+				select: { tags: true },
+			})
+			.then((posts) => {
+				const tagCounts = new Map<string, number>();
+				posts.forEach((post) => {
+					post.tags.forEach((tag) => {
+						tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+					});
+				});
+				return Array.from(tagCounts.entries())
+					.map(([tag, count]) => ({ tag, count }))
+					.sort((a, b) => b.count - a.count)
+					.slice(0, 20);
+			}),
 	]);
 
 	const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -51,15 +89,24 @@ export default async function Home({
 
 	return (
 		<main className='min-h-screen bg-background'>
-			<HeroSection totalStories={total} />
-
 			{/* Content */}
-			<div className='mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8'>
+			<div className='mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
 				{posts.length === 0 ? (
 					<EmptyState />
 				) : (
 					<div className='space-y-16'>
 						{featuredPost && <FeaturedPost post={featuredPost} />}
+
+						{/* Ad Slot - After Featured Post */}
+						<Ad
+							format='horizontal'
+							className='my-8'
+						/>
+
+						{/* Topics Section - Only on first page */}
+						{page === 1 && categories.length > 0 && (
+							<TopicsSection categories={categories} />
+						)}
 
 						<PostGrid
 							posts={gridPosts}
@@ -68,6 +115,17 @@ export default async function Home({
 							}
 							totalCount={total}
 						/>
+
+						{/* Ad Slot - Between Posts and Tags */}
+						<Ad
+							format='in-article'
+							className='my-8'
+						/>
+
+						{/* Tags Section - Only on first page */}
+						{page === 1 && tagData.length > 0 && (
+							<TagsSection tags={tagData} />
+						)}
 
 						<Pagination
 							currentPage={page}

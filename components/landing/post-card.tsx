@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { formatDate, estimateReadTime, getExcerpt } from '@/lib/utils/post';
+import { formatDate, getExcerpt } from '@/lib/utils/post';
 
 interface Post {
 	id: string;
@@ -23,62 +23,57 @@ export function PostCard({ post }: PostCardProps) {
 	return (
 		<Link
 			href={`/posts/${post.slug}`}
-			className='group'
+			className='group block'
 		>
-			<article className='h-full overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:border-foreground/20 hover:shadow-lg hover:shadow-foreground/5 hover:-translate-y-1'>
+			<article className='h-full'>
 				{/* Image */}
 				{post.featuredImageUrl ? (
-					<div className='relative aspect-[16/10] overflow-hidden bg-muted'>
+					<div className='relative aspect-[16/9] overflow-hidden bg-muted mb-3'>
 						<Image
 							src={post.featuredImageUrl}
 							alt={post.featuredImageAlt || post.title}
 							fill
-							className='object-cover transition-transform duration-500 group-hover:scale-105'
+							className='object-cover transition-transform duration-300 group-hover:scale-105'
 							sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
 						/>
 					</div>
 				) : (
-					<div className='relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center'>
-						<div className='text-4xl font-bold text-muted-foreground/20'>
+					<div className='relative aspect-[16/9] overflow-hidden bg-muted mb-3 flex items-center justify-center'>
+						<div className='text-2xl font-bold text-muted-foreground/20'>
 							TP
 						</div>
 					</div>
 				)}
 
 				{/* Content */}
-				<div className='p-5'>
+				<div className='space-y-2'>
 					{/* Tags */}
 					{post.tags.length > 0 && (
-						<div className='flex flex-wrap gap-1.5 mb-3'>
-							{post.tags.slice(0, 2).map((tag) => (
-								<Badge
-									key={tag}
-									variant='secondary'
-									className='text-xs font-normal px-2 py-0'
-								>
-									{tag}
-								</Badge>
-							))}
+						<div className='flex items-center gap-2'>
+							<Badge
+								variant='secondary'
+								className='text-xs font-semibold uppercase tracking-wide'
+							>
+								{post.tags[0]}
+							</Badge>
 						</div>
 					)}
 
 					{/* Title */}
-					<h3 className='font-semibold text-lg leading-snug line-clamp-2 group-hover:text-foreground/80 transition-colors'>
+					<h3 className='font-bold text-xl leading-tight line-clamp-3 group-hover:text-primary transition-colors'>
 						{post.title}
 					</h3>
 
 					{/* Excerpt */}
-					<p className='mt-2 text-sm text-muted-foreground line-clamp-2'>
-						{getExcerpt(post.content, post.excerpt, 100)}
+					<p className='text-sm text-muted-foreground line-clamp-2 leading-relaxed'>
+						{getExcerpt(post.content, post.excerpt, 120)}
 					</p>
 
 					{/* Meta */}
-					<div className='mt-4 flex items-center gap-3 text-xs text-muted-foreground'>
+					<div className='flex items-center gap-2 text-xs text-muted-foreground pt-1'>
 						<time dateTime={post.publishedAt?.toISOString()}>
 							{formatDate(post.publishedAt)}
 						</time>
-						<span className='h-1 w-1 rounded-full bg-muted-foreground/50' />
-						<span>{estimateReadTime(post.content)}</span>
 					</div>
 				</div>
 			</article>
