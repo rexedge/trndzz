@@ -1,17 +1,15 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
+import { buildMacroUrl } from '@/lib/tenancy/host';
 
 export default function robots(): MetadataRoute.Robots {
-	const baseUrl =
-		process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://www.trndzz.com';
-
 	return {
 		rules: [
 			{
 				userAgent: '*',
 				allow: '/',
-				disallow: ['/admin/', '/api/'],
+				disallow: ['/admin/', '/dashboard/', '/api/'],
 			},
 		],
-		sitemap: `${baseUrl}/sitemap.xml`,
+		sitemap: buildMacroUrl('/sitemap.xml'),
 	};
 }

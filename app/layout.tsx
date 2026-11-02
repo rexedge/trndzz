@@ -1,46 +1,55 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
+import {
+	Inter,
+	JetBrains_Mono,
+	Plus_Jakarta_Sans,
+} from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
-import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
-import { PushNotificationPrompt } from '@/components/push-notification-prompt';
-import { NotificationSoundListener } from '@/components/notification-sound-listener';
-import { Navbar } from '@/components/navbar';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 import './globals.css';
-import { Footer } from '@/components/landing';
 
-const geistSans = Geist({
-	variable: '--font-geist-sans',
+const plusJakarta = Plus_Jakarta_Sans({
+	variable: '--font-plus-jakarta',
 	subsets: ['latin'],
+	weight: ['700', '800'],
+	display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-	variable: '--font-geist-mono',
+const inter = Inter({
+	variable: '--font-inter',
 	subsets: ['latin'],
+	weight: ['400', '500', '600'],
+	display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+	variable: '--font-jetbrains-mono',
+	subsets: ['latin'],
+	weight: ['500'],
+	display: 'swap',
 });
 
 export const metadata: Metadata = {
 	title: {
-		template: '%s | Trend Pulse',
-		default: 'Trend Pulse — Fresh, reader-first trend coverage',
+		template: '%s | TRNDZZ',
+		default:
+			'TRNDZZ — Industrial B2B Trade Intelligence, Supplier Directory & RFQ Ecosystem',
 	},
 	description:
-		'Trend Pulse is a minimalist, reader-first blog delivering fresh, well-researched stories from real-time trends.',
-	applicationName: 'Trend Pulse',
-	generator: 'Next.js',
+		'Multi-tenant B2B trade intelligence, SON/ISO-verified industrial supplier registries, commodity price trackers, and specification-driven RFQ procurement across West Africa.',
+	applicationName: 'TRNDZZ',
 	keywords: [
-		'trends',
-		'news',
-		'blog',
-		'trending',
-		'stories',
+		'B2B procurement Nigeria',
+		'aluminium suppliers Nigeria',
+		'industrial RFQ West Africa',
+		'aluminium coils price Lagos',
+		'verified manufacturers directory',
 		'trndzz',
-		'nigeria',
 	],
-	authors: [{ name: 'Trend Pulse' }],
-	creator: 'Trend Pulse',
-	publisher: 'Trend Pulse',
+	authors: [{ name: 'TRNDZZ Trade Intelligence' }],
+	creator: 'TRNDZZ',
+	publisher: 'TRNDZZ',
 	formatDetection: {
 		email: false,
 		address: false,
@@ -53,19 +62,8 @@ export const metadata: Metadata = {
 			{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
 		],
 		apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
-		other: [
-			{
-				rel: 'mask-icon',
-				url: '/android-chrome-192x192.png',
-			},
-		],
 	},
 	manifest: '/manifest.webmanifest',
-	appleWebApp: {
-		capable: true,
-		statusBarStyle: 'default',
-		title: 'Trend Pulse',
-	},
 	other: {
 		'google-adsense-account': 'ca-pub-2109983496009042',
 	},
@@ -77,38 +75,19 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='en'>
-			<head>
-				<Script
-					async
-					src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2109983496009042'
-					crossOrigin='anonymous'
-					strategy='afterInteractive'
-				/>
-				<Script
-					async
-					custom-element='amp-auto-ads'
-					src='https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js'
-					strategy='afterInteractive'
-				/>
-			</head>
+		<html
+			lang='en'
+			suppressHydrationWarning
+		>
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+				className={`${plusJakarta.variable} ${inter.variable} ${jetbrainsMono.variable} min-h-screen antialiased`}
 			>
-				{/* @ts-expect-error AMP custom element */}
-				<amp-auto-ads
-					type='adsense'
-					data-ad-client='ca-pub-2109983496009042'
-				/>
-				<PostHogProvider>
-					<Navbar />
-					{children}
-					<Footer />
-					<PWAInstallPrompt />
-					<PushNotificationPrompt />
-					<NotificationSoundListener />
-					<Toaster richColors />
-				</PostHogProvider>
+				<ThemeProvider>
+					<PostHogProvider>
+						{children}
+						<Toaster richColors />
+					</PostHogProvider>
+				</ThemeProvider>
 			</body>
 		</html>
 	);

@@ -1,32 +1,45 @@
 'use client';
 
 import Link from 'next/link';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface Props {
+export default function RootError({
+	error,
+	reset,
+}: {
 	error: Error & { digest?: string };
 	reset: () => void;
-}
-
-export default function Error({ error, reset }: Props) {
+}) {
 	return (
-		<main className='min-h-screen px-6 py-12'>
-			<div className='mx-auto flex max-w-2xl flex-col gap-4'>
-				<div>
-					<p className='text-sm font-medium text-destructive'>
-						Something went wrong
-					</p>
-					<p className='text-muted-foreground'>
-						{error?.message ?? 'Please try again.'}
-					</p>
+		<div className='flex min-h-[75vh] items-center justify-center px-4'>
+			<div className='w-full max-w-md rounded-xl border border-border bg-card p-8 text-center'>
+				<div className='mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive'>
+					<AlertTriangle className='h-6 w-6' />
 				</div>
-				<div className='flex flex-wrap gap-3'>
-					<Button onClick={reset}>Retry</Button>
-					<Button asChild variant='ghost'>
-						<Link href='/'>Back to home</Link>
+				<h1 className='text-xl font-bold'>
+					Unable to load trade portal view
+				</h1>
+				<p className='mt-2 text-sm text-muted-foreground'>
+					{error.message ||
+						'A temporary connection issue interrupted this request. Please retry.'}
+				</p>
+				<div className='mt-6 flex flex-wrap items-center justify-center gap-3'>
+					<Button
+						onClick={reset}
+						className='gap-2'
+					>
+						<RotateCcw className='h-4 w-4' />
+						Retry Request
+					</Button>
+					<Button
+						asChild
+						variant='outline'
+					>
+						<Link href='/'>Return Home</Link>
 					</Button>
 				</div>
 			</div>
-		</main>
+		</div>
 	);
 }

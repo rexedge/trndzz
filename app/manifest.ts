@@ -1,53 +1,26 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
 	return {
-		name: 'Trend Pulse',
-		short_name: 'Trndzz',
+		name: 'TRNDZZ — B2B Industrial Trade & Procurement Ecosystem',
+		short_name: 'TRNDZZ',
 		description:
-			'Trend Pulse is a minimalist, reader-first blog delivering fresh, well-researched stories from real-time trends.',
+			'Multi-tenant B2B trade intelligence, verified supplier directories, and specification-driven RFQ procurement.',
 		start_url: '/',
 		display: 'standalone',
-		background_color: '#ffffff',
-		theme_color: '#000000',
-		orientation: 'portrait-primary',
+		background_color: '#0b0f19',
+		theme_color: '#1d4ed8',
 		icons: [
-			{
-				src: '/favicon.ico',
-				sizes: 'any',
-				type: 'image/x-icon',
-			},
-			{
-				src: '/favicon-16x16.png',
-				sizes: '16x16',
-				type: 'image/png',
-			},
-			{
-				src: '/favicon-32x32.png',
-				sizes: '32x32',
-				type: 'image/png',
-			},
-			{
-				src: '/apple-touch-icon.png',
-				sizes: '180x180',
-				type: 'image/png',
-				purpose: 'any',
-			},
 			{
 				src: '/android-chrome-192x192.png',
 				sizes: '192x192',
 				type: 'image/png',
-				purpose: 'maskable',
 			},
 			{
 				src: '/android-chrome-512x512.png',
 				sizes: '512x512',
 				type: 'image/png',
-				purpose: 'maskable',
 			},
 		],
-		categories: ['news', 'lifestyle', 'entertainment'],
-		lang: 'en-NG',
-		dir: 'ltr',
 	};
 }

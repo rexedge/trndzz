@@ -1,41 +1,32 @@
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const cards = Array.from({ length: 4 });
-
-export default function Loading() {
+export default function RootLoading() {
 	return (
-		<main className='min-h-screen px-6 py-12'>
-			<div className='mx-auto max-w-4xl space-y-8'>
-				<div className='space-y-2'>
-					<Skeleton className='h-8 w-48' />
-					<Skeleton className='h-4 w-72' />
-				</div>
-
-				<div className='grid gap-4'>
-					{cards.map((_, idx) => (
-						<Card key={idx}>
-							<CardHeader className='space-y-3'>
-								<Skeleton className='h-5 w-5/6' />
-								<div className='flex flex-wrap gap-2'>
-									<Skeleton className='h-5 w-16 rounded-full' />
-									<Skeleton className='h-5 w-12 rounded-full' />
-									<Skeleton className='h-5 w-14 rounded-full' />
-								</div>
-							</CardHeader>
-							<CardContent className='space-y-3'>
-								<Skeleton className='h-4 w-full' />
-								<Skeleton className='h-4 w-11/12' />
-								<Skeleton className='h-4 w-2/3' />
-							</CardContent>
-							<CardFooter className='flex items-center justify-between'>
-								<Skeleton className='h-4 w-20' />
-								<Skeleton className='h-8 w-16 rounded-full' />
-							</CardFooter>
-						</Card>
-					))}
+		<div className='min-h-screen bg-background'>
+			<div className='border-b border-border bg-card px-4 py-2.5'>
+				<div className='mx-auto flex max-w-7xl items-center gap-6'>
+					<Skeleton className='h-4 w-44' />
+					<Skeleton className='h-4 w-36 hidden sm:block' />
+					<Skeleton className='h-4 w-40 hidden md:block' />
 				</div>
 			</div>
-		</main>
+			<div className='border-b border-border bg-background px-4 py-4'>
+				<div className='mx-auto flex max-w-7xl items-center justify-between'>
+					<Skeleton className='h-8 w-40' />
+					<div className='flex items-center gap-3'>
+						<Skeleton className='h-9 w-24' />
+						<Skeleton className='h-9 w-28' />
+					</div>
+				</div>
+			</div>
+			<div className='mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8'>
+				<Skeleton className='h-52 w-full rounded-xl' />
+				<div className='grid gap-6 md:grid-cols-3'>
+					<Skeleton className='h-48 rounded-xl' />
+					<Skeleton className='h-48 rounded-xl' />
+					<Skeleton className='h-48 rounded-xl' />
+				</div>
+			</div>
+		</div>
 	);
 }
