@@ -1,312 +1,220 @@
-# ChatGPT Codex – Engineering & UI Guidelines
+# TRNDZZ – Engineering, Multi-Tenancy & UI Guidelines
 
-**Project Standard: Next.js App Router + Server Actions**
+**Project:** TRNDZZ (`trndzz.com` & `*.trndzz.com`) — Multi-Tenant B2B Trade Intelligence, Vendor Directory & Procurement Ecosystem  
+**Stack:** Next.js 16 (App Router) + Server Actions + Prisma 7 + PostgreSQL + Better Auth + Tailwind CSS v4 + shadcn/ui
 
-This document defines **mandatory engineering, UI/UX, and architectural rules** that must be followed when generating or modifying code in this project.
-
-These rules are **non-negotiable**.
-
----
-
-## 1. Core Principles
-
--   **Mobile-first by default**
--   **Production-grade code only**
--   **Strict separation of concerns**
--   **Server-first architecture**
--   **Security, performance, and accessibility first**
--   **Optimized for low-end mobile devices**
--   **Designed for scalability and maintainability**
+This document defines **mandatory engineering, multi-tenant, security, and UI/UX rules** for TRNDZZ. These rules are **non-negotiable**.
 
 ---
 
-## 2. Framework & Architecture
+## 0. Platform Overview
 
-### Next.js
+**TRNDZZ** organizes fragmented African & emerging-market industrial supply chains into deep vertical B2B trade portals on a single multi-tenant codebase:
 
--   Use **Next.js App Router only**
--   All routing must live inside `/app`
--   Do **NOT** use `/pages`
--   Do **NOT** use legacy APIs
+- **Macro Hub (`trndzz.com`):** Cross-sector trade intelligence aggregator, macro commodity/FX bar, vertical portal directory, unified authentication, `/dashboard` workspace, and `/admin` command center.
+- **Vertical Portals (`[vertical].trndzz.com`, e.g., `aluminium.trndzz.com`, `steel.trndzz.com`, `solar.trndzz.com`):** Standalone sector ecosystems integrating five pillars:
+  1. **Trndzz Pulse:** Value-chain journalism (`UPSTREAM`, `MIDSTREAM`, `DOWNSTREAM`, `CROSS_STREAM`) + Commodity & Regional Price Trackers.
+  2. **Verified Supplier Directory:** Indexed companies mapped by `BusinessRole`, geography, capacity, certifications, and the **"Claim & Convert"** onboarding loop (`UNCLAIMED → CLAIM_PENDING → CLAIMED`).
+  3. **Trndzz Biz (Marketplace & RFQ Engine):** Dynamic `SpecAttributeDefinition` schemas, structured buyer RFQ broadcasting, vendor matching (`RfqVendorMatch`), and comparable supplier quoting (`RfqQuote`).
+  4. **Trndzz Learn (Phase 2):** Gated whitepapers, regulatory guides, and sector reports for B2B lead capture.
+  5. **Contextual Cross-Linking:** Relational links (`ArticleCompanyMention`, category/spec bindings, `Rfq.sourceArticleId`) connecting editorial content directly to verified vendors and 1-click RFQ forms.
 
-### Components
-
--   **Server Components by default**
--   Use **Client Components only when interactivity is required**
--   Avoid `"use client"` unless absolutely necessary
-
-### Data Fetching & Mutations
-
--   Use **Server Actions exclusively**
--   Do **NOT** fetch data inside Client Components
--   Do **NOT** use React Query, SWR, or similar
+**What TRNDZZ is NOT:**
+- Not an AI auto-blog or content farm (AI is strictly for semantic search & spec/entity assistance, never article generation)
+- Not a generic consumer social forum or Nairaland-style gossip board
+- Not separate codebases per industry vertical (zero codebase duplication across `*.trndzz.com`)
 
 ---
 
-## 3. Server Actions (Strict Rules)
+## 1. Core Engineering Principles
 
-All Server Actions MUST:
-
-1. Live inside:
-
-    ```
-    app/actions
-    ```
-
-2. Validate inputs using **Zod**
-
-3. **Never throw errors**
-
-4. Always return a structured response:
-
-```ts
-{
-  success: boolean;
-  message: string;
-  data?: any;
-  errors?: any;
-}
-```
-
-5. Be guarded by:
-
-    - Authentication (server-side)
-    - Role-based access control when required
-
-6. Never expose:
-    - Secrets
-    - Business logic
-    - Authorization logic
-    - Internal IDs
+- **Multi-tenant by configuration, not code duplication** — adding a vertical in Admin immediately provisions `[slug].trndzz.com`
+- **Mobile-first & low-bandwidth resilient** — engineered for both corporate procurement desks and field engineers on mobile networks across West Africa
+- **Server-first architecture** — React Server Components by default; minimal client JavaScript
+- **Strict domain isolation** — business logic and Prisma queries live exclusively in `lib/services/*.service.ts`
+- **Production-grade safety** — strict Zod validation, server-enforced RBAC, zero uncaught exceptions in Server Actions
 
 ---
 
-## 4. Server Components Rules
+## 2. Multi-Tenant Subdomain Routing (`proxy.ts`)
 
--   Always `await params` and `searchParams`
--   Do not assume synchronous access
--   Perform authentication on the server
--   Redirect or block unauthorized users server-side
-
----
-
-## 5. Styling & UI System
-
-### Styling
-
--   **Tailwind CSS only**
--   No CSS files
--   No inline styles
--   Maintain consistent spacing, padding, and layout rhythm
-
-### UI Components
-
--   Use **shadcn/ui** as the base UI system
--   Extend shadcn components when necessary
--   Use **shadcn Skeleton components** for loading states
-
-### Animations
-
--   Use **Framer Motion sparingly**
--   Only subtle, meaningful animations
--   Never animate for decoration alone
+1. **Use `proxy.ts` exclusively** at the project root (Next.js 16 convention). **NEVER** create or use `middleware.ts`.
+2. **Host & Subdomain Resolution Rules in `proxy.ts`:**
+   - Root macro hosts (`trndzz.com`, `www.trndzz.com`, `localhost:3000`) serve macro routes (`app/(macro)/...`) plus shared routes (`/auth`, `/dashboard`, `/admin`, `/api`).
+   - Vertical subdomains (`[slug].trndzz.com` in production, `[slug].localhost:3000` locally) rewrite cleanly to `/vertical/[verticalSlug]/...`.
+   - Shared `/auth`, `/dashboard`, and `/api` paths remain accessible or redirect cleanly to canonical auth endpoints with cross-subdomain cookies (`domain: .trndzz.com` in production).
+3. **Tenant Validation:**
+   - `app/vertical/[verticalSlug]/layout.tsx` MUST resolve the active `Vertical` via cached `vertical.service.ts` and invoke `notFound()` if the slug does not exist or is not `ACTIVE` (unless previewed by `SUPER_ADMIN` / `EDITOR`).
+   - Every vertical database query MUST explicitly filter by `verticalId`. Never leak records across verticals unless explicitly rendering the macro hub (`trndzz.com`).
 
 ---
 
-## 6. Loading, Error & Empty States
+## 3. Next.js 16 App Router & Components
 
-Every route **must include**:
-
-```
-loading.tsx
-error.tsx
-not-found.tsx
-```
-
-Rules:
-
--   Never leave a screen blank
--   Always show skeletons while loading
--   Always show helpful empty states when no data exists
--   Display actionable messages to users
+- Use **Next.js App Router only** (`/app`). Do **NOT** use `/pages`.
+- **Server Components by default.** Only add `"use client"` to leaf interactive components (forms, filter drawers, quote comparison tables, Recharts price charts).
+- Always `await params` and `await searchParams` in Server Components and Route Handlers.
+- Do **NOT** fetch data inside Client Components (no `useEffect` data fetching, no React Query, no SWR). Pass server-fetched data down as serializable props or trigger Server Actions.
 
 ---
 
-## 7. Forms & Validation
+## 4. Server Actions (Strict Contract)
 
--   Use **React Hook Form** for all forms
--   Use **Zod** for schema validation
--   Integrate Zod with React Hook Form resolvers
--   Display validation errors clearly
--   Ensure:
-    -   Proper labels
-    -   Keyboard navigation
-    -   Accessible error messages
+All mutations MUST use **Server Actions** inside `app/actions/` and adhere to every rule below:
 
----
-
-## 8. State Management
-
--   Use **Zustand only**
--   Zustand stores must live inside:
-    ```
-    store/
-    ```
--   Use Zustand for:
-    -   Global state
-    -   Persistent local storage
--   Avoid unnecessary client-side state
--   Prefer server-derived state whenever possible
+1. Start file with `'use server';`
+2. Validate all inputs with **Zod** schemas from `lib/validators/` (including dynamic technical specification validation against `SpecAttributeDefinition` where applicable).
+3. **Never throw unhandled errors** to the client. Catch all operational/database errors and log securely on the server.
+4. Always return a typed `ActionResponse<T>`:
+   ```ts
+   export type ActionResponse<T = undefined> = {
+     success: boolean;
+     message: string;
+     data?: T;
+     errors?: Record<string, string[]>;
+   };
+   ```
+5. Enforce **server-side authentication & authorization** before executing any service call:
+   - Platform admin actions: verify `User.role` (`SUPER_ADMIN`, `EDITOR`, `ANALYST`).
+   - Vendor actions (editing company profile, managing products, submitting `RfqQuote`): verify active `CompanyMember` record (`OWNER`, `ADMIN`, `SALES_REP`) AND `Company.claimStatus === 'CLAIMED'`.
+   - Quoting on `VERIFIED_VENDORS_ONLY` RFQs: verify `Company.verificationTier !== 'UNVERIFIED'`.
+6. Never trust `userId`, `companyId`, `role`, or `verificationTier` passed from client form fields without verifying ownership on the server.
 
 ---
 
-## 9. HTTP & Networking
+## 5. Folder Structure (Mandatory)
 
--   Use **axios for all HTTP requests**
--   Never use `fetch` directly
--   Use a centralized axios instance
-
-### Middleware
-
--   Use `proxy.ts`
--   Do **NOT** use `middleware.ts`
--   Follow Next.js 16 conventions
-
----
-
-## 10. Database Access
-
--   Use **Prisma only**
--   Use **type-safe Prisma queries**
--   No raw SQL unless explicitly approved
--   Prisma access must:
-    -   Be server-only
-    -   Never run on the client
-    -   Live in domain-specific services
-
----
-
-## 11. Folder Structure (Mandatory)
-
-```
+```text
+proxy.ts                              # Next.js 16 subdomain router (trndzz.com vs *.trndzz.com)
 app/
-  ├── actions/
-  ├── (auth)/
-  ├── (dashboard)/
+  ├── actions/                        # Server Actions (mutations only)
+  │   ├── auth.actions.ts
+  │   ├── vertical.actions.ts         # Super-admin vertical, stage, category & spec CRUD
+  │   ├── article.actions.ts          # Trndzz Pulse publishing & company cross-linking
+  │   ├── commodity.actions.ts        # Price indicator & data point updates
+  │   ├── company.actions.ts          # Directory seeding, vendor profile & product management
+  │   ├── claim.actions.ts            # "Claim & Convert" submission & admin verification
+  │   └── rfq.actions.ts              # Buyer RFQ submission, matching & supplier quoting
+  ├── (macro)/                        # Root domain (trndzz.com) pages
+  │   ├── page.tsx                    # Macro cross-sector intelligence hub
+  │   ├── news/                       # Cross-sector editorial feed & article pages
+  │   ├── verticals/                  # All industry portals directory
+  │   ├── search/                     # Ecosystem semantic & structured search
+  │   └── (legal)/                    # about, contact, advertise, privacy, terms
+  ├── vertical/[verticalSlug]/        # Rewritten target for *.trndzz.com subdomains
+  │   ├── layout.tsx                  # Resolves Vertical tenant, injects accent CSS vars & nav
+  │   ├── page.tsx                    # Vertical home (Price bar + Pulse + Directory + Live RFQs)
+  │   ├── pulse/                      # News feed, /stage/[stageSlug], /[articleSlug]
+  │   ├── prices/                     # Commodity & regional price trackers
+  │   ├── directory/                  # Supplier registry, /[companySlug], /[companySlug]/claim
+  │   ├── rfq/                        # Live RFQ board, /new, /[referenceNumber]
+  │   └── products/                   # Specification-filtered product catalog
+  ├── auth/                           # Unified login, register, verify-email
+  ├── dashboard/                      # Authenticated Buyer & Vendor workspace
+  │   ├── page.tsx                    # Overview
+  │   ├── rfqs/                       # Buyer's submitted RFQs & quote comparison matrix
+  │   ├── quotes/                     # Supplier's matched RFQs & submitted quotes
+  │   ├── company/                    # Claimed company profile, certs, products, team
+  │   └── claims/                     # Track pending CompanyClaimRequests
+  ├── admin/                          # Platform Super-Admin, Editor & Analyst console
+  │   ├── page.tsx                    # Ecosystem KPIs
+  │   ├── verticals/                  # Manage verticals, stages, categories, spec schemas
+  │   ├── pulse/                      # Editorial CMS & contextual company mentions
+  │   ├── prices/                     # Commodity ticker updates
+  │   ├── directory/                  # Seed companies & manage verification tiers
+  │   ├── claims/                     # Review & approve/reject Claim & Convert requests
+  │   └── rfqs/                       # Vet buyer RFQs & monitor vendor match liquidity
+  ├── api/                            # Auth handlers, webhooks & cron routes only
   ├── loading.tsx
   ├── error.tsx
   └── not-found.tsx
 
+components/
+  ├── macro/                          # Macro hub components
+  ├── vertical/                       # Vertical shell, masthead, stream navigation
+  ├── pulse/                          # Article cards, value-chain badges, commodity ticker bar
+  ├── directory/                      # Supplier cards, role/tier badges, claim CTA banners
+  ├── rfq/                            # Dynamic spec form, RFQ cards, quote comparison table
+  ├── cross-link/                     # Contextual supplier cards & 1-click inline RFQ drawer
+  ├── dashboard/                      # Buyer/Vendor workspace components
+  ├── admin/                          # Admin console tables & editors
+  ├── ui/                             # shadcn/ui primitives
+  └── providers/                      # Theme & PostHog providers
+
 lib/
-  ├── auth/
-  ├── prisma/
-  ├── validators/
+  ├── auth/                           # Better Auth server & cross-subdomain session helpers
+  ├── http/                           # Centralized axios client (never use raw fetch)
+  ├── prisma/                         # Prisma 7 singleton client
+  ├── tenancy/                        # Hostname parsing & vertical tenant resolution helpers
+  ├── validators/                     # Zod schemas (static + dynamic spec validators)
+  ├── services/                       # Server-only domain services (all Prisma access here)
+  │   ├── vertical.service.ts
+  │   ├── article.service.ts
+  │   ├── commodity.service.ts
+  │   ├── company.service.ts
+  │   ├── claim.service.ts
+  │   ├── rfq.service.ts
+  │   ├── search.service.ts
+  │   └── stats.service.ts
   └── utils/
 
 store/
-  └── useAppStore.ts
+  └── useRfqDraftStore.ts             # Zustand store (client UI state only)
 ```
 
-Use **clear, domain-based folders**.
-Avoid dumping unrelated logic into shared folders.
+---
+
+## 6. Database, Money & Technical Spec Rules
+
+- **Prisma 7 only** (`prisma/schema.prisma` + `prisma.config.ts`). Keep all Prisma queries inside `lib/services/` (`import 'server-only'`).
+- **Decimal Precision:** Never use JavaScript `number` floats for prices or quantities in persistence. Map Prisma `Decimal` cleanly to formatted strings/numbers at serialization boundaries before passing to Client Components.
+- **Currency & Units:**
+  - Default commercial currency is **Nigerian Naira (`₦` / `NGN`)**.
+  - International commodity benchmarks (e.g., LME Aluminium) must explicitly store and render their currency code (`USD/MT` vs `₦/MT`).
+- **Dynamic Specifications (`Json`):**
+  - `CompanyProduct.specifications` and `Rfq.specifications` MUST be validated server-side against the active `SpecAttributeDefinition` records for that `verticalId` + `categoryId`.
 
 ---
 
-## 12. Authentication & Authorization
+## 7. Design System, Typography & UX Rules
 
--   Handle authentication **on the server**
--   Enforce **role-based access control**
--   Guard:
-    -   Routes
-    -   Server Actions
--   Never expose auth logic to the client
--   Never trust client-side role checks
-
----
-
-## 13. UX & Accessibility
-
--   Mobile-first layout and typography
--   Smaller font sizes on mobile, scale up on tablet/desktop
--   Ensure:
-    -   Keyboard accessibility
-    -   Proper contrast
-    -   Clear focus states
--   Maintain visual consistency across screens
+- **Styling:** Tailwind CSS v4 + `shadcn/ui` only. No custom `.css` component files and no inline styles (except CSS custom property injection `--vertical-accent` on the vertical layout root).
+- **Industrial Palette:**
+  - Macro Primary: Signal Cobalt (`#1D4ED8` light / `#3B82F6` dark)
+  - RFQ / Claim Accent: Industrial Amber (`#D97706` light / `#F59E0B` dark)
+  - Verified Trust / Positive Tick: Emerald (`#059669` light / `#10B981` dark)
+  - Alert / Negative Tick: Crimson (`#DC2626` light / `#EF4444` dark)
+  - Dark Canvas: Deep Obsidian (`#0B0F19`), Card (`#111827`), Border (`#1F2937`)
+  - Light Canvas: Clean Slate (`#F8FAFC`), Card (`#FFFFFF`), Border (`#E2E8F0`)
+- **Typography (`next/font`):**
+  - Headlines: `Plus Jakarta Sans` (700, 800)
+  - UI & Editorial Body: `Inter` (400, 500, 600)
+  - Prices, Gauges, Alloys, Capacities & RFQ Codes: `JetBrains Mono` (500) with `tabular-nums`
+- **Route Resilience:** Every route segment MUST provide `loading.tsx` (using `shadcn/ui` `Skeleton`, never spinners), `error.tsx`, and `not-found.tsx`, plus actionable empty states.
+- **Feedback:** Use `sonner` toast notifications for all form and action outcomes.
+- **External Links:** All external vendor websites and source citations must render with `rel="noopener noreferrer"`.
 
 ---
 
-## 14. Performance Guidelines
+## 8. HTTP, Networking & AI Boundaries
 
--   Optimize for **low-end mobile devices**
--   Avoid over-fetching
--   Avoid duplicate requests
--   Prefer server-side computation
--   Minimize client-side JavaScript
--   Use skeletons instead of spinners
+- **HTTP Client:** Use the centralized **axios** instance (`lib/http/axios.ts`) for external HTTP calls (PostHog queries, commodity feeds). Never use raw `fetch` in application code.
+- **AI Usage:** `OpenAI` is permitted strictly for semantic search, supplier/RFQ matching assistance, and structured specification normalization—**never** for auto-generating news articles or fake vendor reviews.
 
 ---
 
-## 15. Notifications & Feedback
+## 9. Forbidden Practices
 
--   Use **toast from `sonner`**
--   Provide feedback for:
-    -   Success
-    -   Errors
-    -   Empty states
--   Never silently fail
-
----
-
-## 16. Currency & Localization
-
--   Default currency: **Nigerian Naira (₦)**
--   Do not assume USD unless explicitly requested
+- Using Pages Router (`/pages`)
+- Creating `middleware.ts` instead of `proxy.ts`
+- Querying vertical data without scoping by `verticalId`
+- Fetching data inside Client Components or importing `@prisma/client` on the client
+- Throwing uncaught exceptions in Server Actions
+- Allowing `UNCLAIMED` companies to view buyer PII or submit `RfqQuote` records before claim approval
+- Using spinners instead of `Skeleton` placeholders, or leaving blank loading/empty screens
+- Auto-generating editorial content with AI
+- Hardcoding single-industry logic in UI components instead of reading from `Vertical`, `ValueChainStage`, and `SpecAttributeDefinition`
 
 ---
 
-## 17. Code Quality Standards
-
--   Keep code:
-    -   Modular
-    -   Readable
-    -   Scalable
-    -   Production-ready
--   Avoid:
-    -   God components
-    -   Tight coupling
-    -   Magic values
--   Use clear naming conventions
--   Document complex logic inline
-
----
-
-## 18. Forbidden Practices
-
-🚫 Using Pages Router
-🚫 Throwing errors in Server Actions
-🚫 Fetching data in Client Components
-🚫 Exposing secrets to the client
-🚫 Using middleware.ts
-🚫 Inline styles or CSS files
-🚫 Over-animating UI
-🚫 Blank screens
-🚫 Skipping loading/error states
-
----
-
-## 19. Codex Instruction
-
-When generating code, **ChatGPT Codex must**:
-
--   Follow all rules above
--   Assume this is a **production application**
--   Ask for clarification only when absolutely required
--   Prefer correctness over brevity
--   Optimize for maintainability and scalability
-
----
-
-### ✅ This document is the **single source of truth** for all generated code.
-
-### ❌ Any deviation from these rules is strictly prohibited.
+*This document is the single source of truth for TRNDZZ engineering and architecture.*
