@@ -3,9 +3,12 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
+const SCHEMA_CLIENT_REVISION = 'phase2-learn-v1';
+
 const globalForPrisma = globalThis as unknown as {
 	pgPool: Pool | undefined;
 	prisma: PrismaClient | undefined;
+	prismaRevision: string | undefined;
 };
 
 function createPrismaClient(): PrismaClient {
@@ -32,8 +35,24 @@ function createPrismaClient(): PrismaClient {
 	});
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function resolvePrismaSingleton(): PrismaClient {
+	const cached = globalForPrisma.prisma;
+	const hasCurrentModels =
+		cached &&
+		globalForPrisma.prismaRevision === SCHEMA_CLIENT_REVISION &&
+		'knowledgeResource' in cached &&
+		'resourceLead' in cached;
 
-if (process.env.NODE_ENV !== 'production') {
-	globalForPrisma.prisma = prisma;
+	if (hasCurrentModels) {
+		return cached;
+	}
+
+	const fresh = createPrismaClient();
+	if (process.env.NODE_ENV !== 'production') {
+		globalForPrisma.prisma = fresh;
+		globalForPrisma.prismaRevision = SCHEMA_CLIENT_REVISION;
+	}
+	return fresh;
 }
+
+export const prisma = resolvePrismaSingleton();

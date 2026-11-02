@@ -44,8 +44,8 @@ export default async function AdminCommandCenterPage() {
 		prisma.rfq.count({
 			where: { status: { in: [RfqStatus.OPEN, RfqStatus.QUOTING] } },
 		}),
-		prisma.knowledgeResource.count(),
-		prisma.resourceLead.count(),
+		prisma.knowledgeResource ? prisma.knowledgeResource.count() : Promise.resolve(0),
+		prisma.resourceLead ? prisma.resourceLead.count() : Promise.resolve(0),
 	]);
 
 	const modules = [

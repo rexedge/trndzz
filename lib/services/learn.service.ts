@@ -11,6 +11,9 @@ export async function listVerticalResources(params: {
 	type?: ResourceType;
 	query?: string;
 }) {
+	if (!prisma.knowledgeResource) {
+		return [];
+	}
 	return prisma.knowledgeResource.findMany({
 		where: {
 			isPublished: true,
@@ -61,6 +64,9 @@ export async function listMacroResources(params?: {
 	type?: ResourceType;
 	query?: string;
 }) {
+	if (!prisma.knowledgeResource) {
+		return [];
+	}
 	return prisma.knowledgeResource.findMany({
 		where: {
 			isPublished: true,
@@ -112,6 +118,9 @@ export async function getResourceForReader(params: {
 	userId?: string;
 	unlockedResourceIds?: string[];
 }) {
+	if (!prisma.knowledgeResource) {
+		return null;
+	}
 	const resource = await prisma.knowledgeResource.findFirst({
 		where: {
 			slug: params.slug,
@@ -231,6 +240,9 @@ export async function captureLeadAndUnlockResource(
 }
 
 export async function listAdminResourcesAndLeads() {
+	if (!prisma.knowledgeResource || !prisma.resourceLead) {
+		return { resources: [], leads: [] };
+	}
 	const [resources, leads] = await Promise.all([
 		prisma.knowledgeResource.findMany({
 			orderBy: { createdAt: 'desc' },

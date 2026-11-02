@@ -380,7 +380,7 @@ export async function searchEcosystem(params: {
 					})
 				: Promise.resolve([]),
 
-			wantLearn
+			wantLearn && prisma.knowledgeResource
 				? prisma.knowledgeResource.findMany({
 						where: {
 							isPublished: true,
