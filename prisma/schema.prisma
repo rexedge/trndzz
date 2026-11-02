@@ -119,6 +119,14 @@ enum RfqQuoteStatus {
   WITHDRAWN
 }
 
+enum ResourceType {
+  WHITEPAPER
+  SECTOR_REPORT
+  REGULATORY_GUIDE
+  TRADE_MAGAZINE
+  WEBINAR
+}
+
 // ============================================================================
 // Identity & Authentication (Better Auth Compatible)
 // ============================================================================
@@ -142,6 +150,7 @@ model User {
   reviewedClaims     CompanyClaimRequest[] @relation("ClaimReviewer")
   rfqs               Rfq[]                 @relation("BuyerRfqs")
   submittedQuotes    RfqQuote[]
+  resourceLeads      ResourceLead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -220,6 +229,7 @@ model Vertical {
   companies        CompanyVertical[]
   products         CompanyProduct[]
   rfqs             Rfq[]
+  resources        KnowledgeResource[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -272,6 +282,7 @@ model Category {
   companies       CompanyCategory[]
   products        CompanyProduct[]
   rfqs            Rfq[]
+  resources       KnowledgeResource[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -436,6 +447,7 @@ model Company {
   rfqMatches      RfqVendorMatch[]
   rfqQuotes       RfqQuote[]
   directRfqs      Rfq[]                  @relation("DirectCompanyRfqs")
+  sponsoredResources KnowledgeResource[] @relation("SponsoredResources")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -663,6 +675,68 @@ model RfqQuote {
   @@unique([rfqId, companyId])
   @@index([rfqId, status])
   @@index([companyId, createdAt])
+}
+
+// ============================================================================
+// Pillar 4: Trndzz Learn (Knowledge Hub & Gated Lead Capture)
+// ============================================================================
+
+model KnowledgeResource {
+  id                  String        @id @default(cuid())
+  verticalId          String?
+  vertical            Vertical?     @relation(fields: [verticalId], references: [id], onDelete: SetNull)
+  categoryId          String?
+  category            Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sponsorCompanyId    String?
+  sponsorCompany      Company?      @relation("SponsoredResources", fields: [sponsorCompanyId], references: [id], onDelete: SetNull)
+
+  title               String
+  slug                String        @unique
+  summary             String        @db.Text
+  contentPreview      String        @db.Text // Executive summary visible before lead gate
+  fullContentMarkdown String        @db.Text // Full whitepaper / technical dossier unlocked after lead gate
+  fileUrl             String?       // Optional downloadable PDF / slide deck URL
+  coverImageUrl       String?
+  type                ResourceType  @default(WHITEPAPER)
+  isGated             Boolean       @default(true)
+  isFeatured          Boolean       @default(false)
+  isPublished         Boolean       @default(true)
+  pageCount           Int?
+  downloadCount       Int           @default(0)
+  publishedAt         DateTime      @default(now())
+
+  leads               ResourceLead[]
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([verticalId, isPublished, publishedAt])
+  @@index([type, isPublished])
+  @@index([categoryId])
+}
+
+model ResourceLead {
+  id                    String            @id @default(cuid())
+  resourceId            String
+  resource              KnowledgeResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  userId                String?
+  user                  User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  fullName              String
+  workEmail             String
+  phone                 String
+  companyName           String
+  jobTitle              String
+  businessRole          BusinessRole?
+  procurementTimeline   String?           // e.g., "Immediate (0-30 Days)", "Q1/Q2 Upcoming Tender"
+  estimatedBudgetBand   String?           // e.g., "₦10M - ₦50M", "₦50M - ₦250M", "₦250M+"
+  deliveryState         String?
+
+  createdAt             DateTime          @default(now())
+
+  @@index([resourceId, createdAt])
+  @@index([workEmail])
+  @@index([userId])
 }
 
 // ============================================================================
