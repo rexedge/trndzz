@@ -4,280 +4,696 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+enum UserRole {
+  SUPER_ADMIN // Platform-wide administration across all verticals
+  EDITOR      // Trndzz Pulse editorial publishing & directory curation
+  ANALYST     // Market intelligence, commodity price updates & RFQ vetting
+  USER        // Standard buyer or vendor team member
+}
+
+enum VerticalStatus {
+  DRAFT    // Being seeded before public launch
+  ACTIVE   // Live on [slug].trndzz.com and indexed on trndzz.com
+  ARCHIVED // Retired or hidden vertical
+}
+
+enum StreamPosition {
+  UPSTREAM     // Raw material extraction / primary import (e.g., Bauxite, Alumina)
+  MIDSTREAM    // Primary processing / smelting / billets / ingots / coils
+  DOWNSTREAM   // Fabrication, extrusion, roofing, installation, end-use
+  CROSS_STREAM // Machinery, testing, logistics, trade finance, EPC services
+}
+
+enum SpecInputType {
+  SELECT
+  MULTI_SELECT
+  NUMBER
+  TEXT
+  BOOLEAN
+}
+
+enum ArticleType {
+  NEWS                // Daily sector news & developments
+  MARKET_BRIEF        // Commodity & regional price movement updates
+  PRICE_ANALYSIS      // Deep-dive pricing & supply-demand commentary
+  POLICY_REGULATORY   // Tariffs, SON/MANCAP standards, import policy
+  EXECUTIVE_INTERVIEW // Industry leadership profiles & interviews
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BusinessRole {
+  MANUFACTURER
+  IMPORTER
+  PROCESSOR_EXTRUDER
+  DISTRIBUTOR
+  FABRICATOR_INSTALLER
+  EQUIPMENT_SUPPLIER
+  SERVICE_PROVIDER
+}
+
+enum ClaimStatus {
+  UNCLAIMED     // Pre-seeded directory profile awaiting owner claim
+  CLAIM_PENDING // Claim submitted and under admin verification
+  CLAIMED       // Actively managed by verified company representatives
+}
+
+enum VerificationTier {
+  UNVERIFIED         // Basic pre-seeded or unvetted profile
+  VERIFIED           // Vetted identity, CAC/registration & operational proof
+  VERIFIED_PRO       // Paid SaaS tier: priority placement + real-time RFQ alerts
+  ENTERPRISE_SPONSOR // Flagship vertical sponsor: category exclusivity + analytics
+}
+
+enum CompanyMemberRole {
+  OWNER
+  ADMIN
+  SALES_REP
+}
+
+enum ClaimRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RfqVisibility {
+  PUBLIC_BOARD          // Visible on vertical RFQ board; verified vendors can quote
+  VERIFIED_VENDORS_ONLY // Private broadcast to matched verified vendors only
+  INVITED_ONLY          // Restricted to explicitly selected supplier IDs
+}
+
+enum RfqStatus {
+  PENDING_REVIEW // Submitted by buyer; awaiting spam/spec check (or auto-opened)
+  OPEN           // Actively broadcasting & accepting supplier quotes
+  QUOTING        // Quotes received and under buyer comparison
+  AWARDED        // Buyer selected a winning supplier quote
+  CLOSED         // Closed without award or expired
+  CANCELLED      // Withdrawn by buyer or rejected by moderation
+}
+
+enum RfqMatchStatus {
+  MATCHED  // Pre-qualified by vertical, role, geography, or technical specs
+  NOTIFIED // Alert sent (or claim-teaser sent if company is UNCLAIMED)
+  VIEWED   // Vendor opened RFQ specifications
+  QUOTED   // Vendor submitted a formal RfqQuote
+  DECLINED // Vendor opted out of quoting
+}
+
+enum RfqQuoteStatus {
+  SUBMITTED
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// ============================================================================
+// Identity & Authentication (Better Auth Compatible)
+// ============================================================================
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?  @unique
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-}
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  phone         String?
+  jobTitle      String?
+  companyName   String?  // Optional buyer organization name prior to linking a Company
+  role          UserRole @default(USER)
 
-model Trend {
-  id         String   @id @default(cuid())
-  provider   String   // 'google', 'manual', etc.
-  identifier String   // Unique identifier from provider
-  title      String
-  metadata   Json?    // Additional trend data
-  fetchedAt  DateTime @default(now())
-  posts      Post[]
+  sessions           Session[]
+  accounts           Account[]
+  articles           Article[]
+  companyMemberships CompanyMember[]
+  claimRequests      CompanyClaimRequest[] @relation("ClaimRequester")
+  reviewedClaims     CompanyClaimRequest[] @relation("ClaimReviewer")
+  rfqs               Rfq[]                 @relation("BuyerRfqs")
+  submittedQuotes    RfqQuote[]
 
-  @@unique([provider, identifier])
-  @@index([fetchedAt])
-}
-
-model Post {
-  id                   String   @id @default(cuid())
-  title                String
-  slug                 String   @unique
-  content              String   @db.Text
-  excerpt              String?
-  status               String   @default("draft") // 'draft', 'scheduled', 'published'
-  tags                 String[] @default([])
-
-  // Featured image fields
-  featuredImageUrl     String?
-  featuredImageAlt     String?
-  featuredImageCredit  String?
-  featuredImagePrompt  String?  // AI prompt used to find the image
-
-  // SEO and metadata
-  metaDescription      String?
-  relatedQueries       String[] @default([]) // Related search queries for SEO
-  focusKeyword         String?  // Primary SEO keyword
-  secondaryKeywords    String[] @default([]) // Secondary keywords
-
-  // Category (for topic clusters)
-  categoryId           String?
-  category             Category? @relation("PostCategory", fields: [categoryId], references: [id], onDelete: SetNull)
-
-  // Relationships
-  generatedFromTrendId String?
-  trend                Trend?      @relation(fields: [generatedFromTrendId], references: [id], onDelete: SetNull)
-  images               PostImage[]
-
-  // Timestamps
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  scheduledAt          DateTime?
-  publishedAt          DateTime?
-
-  @@index([status])
-  @@index([publishedAt])
-  @@index([createdAt])
-  @@index([categoryId])
-}
-
-model PostImage {
-  id        String   @id @default(cuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  url       String
-  alt       String?
-  caption   String?
-  credit    String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-
-  @@index([postId])
-}
-
-model Job {
-  id         String    @id @default(cuid())
-  trendId    String?
-  status     String    @default("pending") // 'pending', 'processing', 'completed', 'failed'
-  logs       String?   @db.Text
-  startedAt  DateTime?
-  finishedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  @@index([status])
-}
-
-model PushSubscription {
-  id        String   @id @default(cuid())
-  endpoint  String   @unique
-  p256dh    String   // Public key
-  auth      String   // Auth secret
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([role])
   @@index([createdAt])
 }
 
-// ============================================
-// SEO & Content Strategy Models
-// ============================================
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// ============================================================================
+// Multi-Tenant Core: Industry Verticals & Value-Chain Taxonomy
+// ============================================================================
+
+model Vertical {
+  id              String         @id @default(cuid())
+  name            String         @unique // e.g., "Aluminium", "Steel", "Solar"
+  slug            String         @unique // Maps to [slug].trndzz.com (e.g., "aluminium")
+  tagline         String?
+  description     String?        @db.Text
+  status          VerticalStatus @default(DRAFT)
+  themeColor      String?        // Hex accent token (e.g., "#0284C7")
+  iconName        String?        // Lucide icon identifier
+  displayOrder    Int            @default(0)
+  metaTitle       String?
+  metaDescription String?
+
+  valueChainStages ValueChainStage[]
+  categories       Category[]
+  specDefinitions  SpecAttributeDefinition[]
+  articles         Article[]
+  indicators       CommodityIndicator[]
+  companies        CompanyVertical[]
+  products         CompanyProduct[]
+  rfqs             Rfq[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug, status])
+  @@index([displayOrder])
+}
+
+model ValueChainStage {
+  id             String         @id @default(cuid())
+  verticalId     String
+  vertical       Vertical       @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  name           String         // e.g., "Downstream: Coils, Extrusions & Roofing"
+  slug           String         // e.g., "downstream"
+  streamPosition StreamPosition
+  description    String?        @db.Text
+  displayOrder   Int            @default(0)
+
+  categories Category[]
+  articles   Article[]
+  rfqs       Rfq[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([verticalId, slug])
+  @@index([verticalId, streamPosition])
+}
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "Technology & AI"
-  slug        String   @unique // e.g., "technology"
-  description String?  @db.Text
-  color       String?  // For UI display (hex color)
-  icon        String?  // Icon name
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
+  id                String           @id @default(cuid())
+  verticalId        String
+  vertical          Vertical         @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  valueChainStageId String?
+  valueChainStage   ValueChainStage? @relation(fields: [valueChainStageId], references: [id], onDelete: SetNull)
+  parentId          String?
+  parent            Category?        @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
+  children          Category[]       @relation("SubCategories")
 
-  // Hub page SEO
-  hubTitle         String?
-  hubDescription   String? @db.Text
-  hubMetaDescription String?
+  name            String  // e.g., "Aluminium Coils", "Architectural Extrusions"
+  slug            String  // e.g., "aluminium-coils"
+  description     String? @db.Text
+  defaultUnit     String? // e.g., "MT", "sqm", "lengths"
+  displayOrder    Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  posts       Post[]   @relation("PostCategory")
-  keywords    Keyword[]
-  contentPlans ContentPlan[]
+  specDefinitions SpecAttributeDefinition[]
+  articles        Article[]
+  companies       CompanyCategory[]
+  products        CompanyProduct[]
+  rfqs            Rfq[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([isActive])
-  @@index([order])
+  @@unique([verticalId, slug])
+  @@index([verticalId, valueChainStageId])
+  @@index([parentId])
 }
 
-model Keyword {
-  id            String   @id @default(cuid())
-  keyword       String   // The actual keyword/phrase
-  searchVolume  Int?     // Estimated monthly searches
-  difficulty    Int?     // 0-100 difficulty score
-  intent        String?  // informational, navigational, transactional, commercial
-  priority      String   @default("medium") // high, medium, low
-  status        String   @default("research") // research, targeting, ranking, achieved
+model SpecAttributeDefinition {
+  id           String        @id @default(cuid())
+  verticalId   String
+  vertical     Vertical      @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  categoryId   String?       // Null = applies across entire vertical; set = category-specific
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  key          String        // Machine key, e.g., "gauge_mm", "alloy", "surface_finish"
+  label        String        // Human label, e.g., "Gauge / Thickness", "Alloy Grade"
+  unit         String?       // e.g., "mm", "gsm", "W"
+  inputType    SpecInputType @default(SELECT)
+  options      String[]      // Allowed options for SELECT / MULTI_SELECT (e.g., ["AA1100", "AA3003"])
+  isRequired   Boolean       @default(false)
+  isFilterable Boolean       @default(true)
+  displayOrder Int           @default(0)
 
-  // Clustering
-  categoryId    String?
-  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Tracking
-  currentRank   Int?     // Current Google ranking position
-  targetPostId  String?  // Post targeting this keyword
+  @@unique([verticalId, categoryId, key])
+  @@index([verticalId, categoryId])
+}
 
-  notes         String?  @db.Text
+// ============================================================================
+// Pillar 1: Trndzz Pulse (Value-Chain News & Commodity Price Trackers)
+// ============================================================================
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model Article {
+  id                String           @id @default(cuid())
+  verticalId        String?          // Null = pure macro cross-sector editorial on trndzz.com
+  vertical          Vertical?        @relation(fields: [verticalId], references: [id], onDelete: SetNull)
+  valueChainStageId String?
+  valueChainStage   ValueChainStage? @relation(fields: [valueChainStageId], references: [id], onDelete: SetNull)
+  categoryId        String?          // Primary product/trade category for contextual RFQ prefill
+  category          Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  @@unique([keyword, categoryId])
+  title            String
+  slug             String        @unique
+  excerpt          String        @db.Text
+  body             String        @db.Text
+  type             ArticleType   @default(NEWS)
+  status           ArticleStatus @default(DRAFT)
+  isMacroFeatured  Boolean       @default(false) // Promoted to root trndzz.com macro hub
+  isVerticalPinned Boolean       @default(false) // Pinned in vertical hero
+
+  featuredImageUrl String?
+  featuredImageAlt String?
+  sourceName       String? // Optional external regulatory/exchange citation
+  sourceUrl        String?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  focusKeyword    String?
+
+  viewCount   Int       @default(0)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  publishedAt DateTime?
+
+  // Pillar 5: Contextual Cross-Linking
+  companyMentions ArticleCompanyMention[]
+  attributedRfqs  Rfq[]                   @relation("ArticleAttributedRfqs")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([verticalId, status, publishedAt])
+  @@index([isMacroFeatured, status, publishedAt])
+  @@index([valueChainStageId])
   @@index([categoryId])
-  @@index([status])
-  @@index([priority])
+  @@index([type])
+  @@index([authorId])
 }
 
-model ContentPlan {
-  id            String   @id @default(cuid())
-  title         String   // Planned title
-  targetKeyword String?  // Primary keyword to target
-  secondaryKeywords String[] @default([]) // Secondary keywords
-  searchIntent  String?  // informational, navigational, transactional, commercial
-  contentType   String   @default("post") // post, hub, evergreen, news
+model CommodityIndicator {
+  id            String    @id @default(cuid())
+  verticalId    String?   // Null = macro indicator (e.g., USD/NGN FX rate)
+  vertical      Vertical? @relation(fields: [verticalId], references: [id], onDelete: SetNull)
+  code          String    @unique // e.g., "LME_ALU_CASH", "NG_ALU_COIL_055"
+  name          String    // e.g., "LME Aluminium Cash", "0.55mm Stucco Coil (Lagos)"
+  unit          String    // e.g., "MT", "sqm", "USD"
+  currency      String    @default("NGN") // "NGN" default; "USD" for global LME benchmarks
+  latestPrice   Decimal   @db.Decimal(18, 4)
+  previousPrice Decimal?  @db.Decimal(18, 4)
+  changePercent Decimal?  @db.Decimal(8, 4)
+  sourceLabel   String?   // e.g., "LME", "Trndzz Market Survey"
+  isActive      Boolean   @default(true)
+  displayOrder  Int       @default(0)
 
-  // Category
-  categoryId    String?
-  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  pricePoints CommodityPricePoint[]
 
-  // Planning details
-  outline       String?  @db.Text // Content outline/brief
-  targetWordCount Int?
-  internalLinks String[] @default([]) // Slugs of posts to link to
-  competitors   String[] @default([]) // Competitor URLs to beat
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Status tracking
-  status        String   @default("idea") // idea, planned, writing, review, published
-  priority      String   @default("high") // high, medium, low
-  dueDate       DateTime?
+  @@index([verticalId, isActive, displayOrder])
+}
 
-  // After publishing
-  publishedPostId String? @unique
+model CommodityPricePoint {
+  id          String             @id @default(cuid())
+  indicatorId String
+  indicator   CommodityIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  price       Decimal            @db.Decimal(18, 4)
+  recordedAt  DateTime           @default(now())
+  note        String?
 
-  notes         String?  @db.Text
+  @@index([indicatorId, recordedAt])
+}
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+// ============================================================================
+// Pillar 2: Verified B2B Supplier Directory & "Claim & Convert" Engine
+// ============================================================================
 
-  @@index([status])
-  @@index([priority])
-  @@index([dueDate])
+model Company {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  tagline          String?
+  description      String?          @db.Text
+  businessRoles    BusinessRole[]   // e.g., [MANUFACTURER, IMPORTER]
+  claimStatus      ClaimStatus      @default(UNCLAIMED)
+  verificationTier VerificationTier @default(UNVERIFIED)
+  isPublished      Boolean          @default(true)
+
+  // Branding & Public Contact
+  logoUrl        String?
+  bannerUrl      String?
+  websiteUrl     String?
+  publicEmail    String?
+  publicPhone    String?
+  whatsappNumber String?
+
+  // Geographic & Operational Profile
+  country             String   @default("NG")
+  headquartersState   String   // e.g., "Lagos", "Ogun", "Rivers", "Kano"
+  city                String?
+  address             String?  @db.Text
+  coverageStates      String[] // States/regions supplied or serviced
+  yearEstablished     Int?
+  employeeCountRange  String?  // e.g., "50-200", "200-500"
+  productionCapacity  String?  // e.g., "24,000 MT/yr Rolling & Coating"
+  minimumOrderSummary String?  // e.g., "5 MT for custom coil slitting"
+  rcNumber            String?  // Corporate Affairs Commission (CAC) registration number
+  verifiedAt          DateTime?
+
+  // Relations
+  verticals       CompanyVertical[]
+  categories      CompanyCategory[]
+  certifications  CompanyCertification[]
+  members         CompanyMember[]
+  claimRequests   CompanyClaimRequest[]
+  products        CompanyProduct[]
+  articleMentions ArticleCompanyMention[]
+  rfqMatches      RfqVendorMatch[]
+  rfqQuotes       RfqQuote[]
+  directRfqs      Rfq[]                  @relation("DirectCompanyRfqs")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([claimStatus])
+  @@index([verificationTier])
+  @@index([headquartersState])
+  @@index([isPublished])
+}
+
+model CompanyVertical {
+  id              String           @id @default(cuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  verticalId      String
+  vertical        Vertical         @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  streamPositions StreamPosition[] // e.g., [MIDSTREAM, DOWNSTREAM]
+  isPrimary       Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, verticalId])
+  @@index([verticalId])
+}
+
+model CompanyCategory {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, categoryId])
   @@index([categoryId])
 }
 
-model SeoChecklist {
-  id        String   @id @default(cuid())
-  postId    String   @unique
+model CompanyCertification {
+  id                String    @id @default(cuid())
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name              String    // e.g., "SON MANCAP", "ISO 9001:2015", "NIS Certified"
+  issuer            String?   // e.g., "Standards Organisation of Nigeria"
+  certificateNumber String?
+  documentUrl       String?
+  isVerified        Boolean   @default(false)
+  issuedAt          DateTime?
+  expiresAt         DateTime?
 
-  // On-page SEO checks
-  hasMetaDescription    Boolean @default(false)
-  hasFocusKeyword       Boolean @default(false)
-  keywordInTitle        Boolean @default(false)
-  keywordInFirstPara    Boolean @default(false)
-  hasInternalLinks      Boolean @default(false)
-  hasExternalLinks      Boolean @default(false)
-  hasImages             Boolean @default(false)
-  imagesHaveAlt         Boolean @default(false)
+  createdAt DateTime @default(now())
 
-  // Content quality
-  wordCount             Int?
-  readabilityScore      Int?
-
-  // Tracking
-  focusKeyword          String?
-  internalLinksCount    Int     @default(0)
-  externalLinksCount    Int     @default(0)
-
-  lastChecked           DateTime @default(now())
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  @@index([companyId])
 }
 
-// ============================================
-// Weekly Content Calendar
-// ============================================
+model CompanyMember {
+  id        String            @id @default(cuid())
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      CompanyMemberRole @default(SALES_REP)
 
-model ContentCalendar {
-  id          String   @id @default(cuid())
-  weekStart   DateTime // Start of the week (e.g., Monday)
-  weekEnd     DateTime // End of the week (e.g., Sunday)
-  name        String?  // Optional name, e.g., "Week 1 - January 2025"
+  createdAt DateTime @default(now())
 
-  items       ContentCalendarItem[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([weekStart])
-  @@index([createdAt])
+  @@unique([companyId, userId])
+  @@index([userId])
 }
 
-model ContentCalendarItem {
-  id            String   @id @default(cuid())
-  calendarId    String
-  calendar      ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+model CompanyClaimRequest {
+  id               String             @id @default(cuid())
+  companyId        String
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requesterId      String
+  requester        User               @relation("ClaimRequester", fields: [requesterId], references: [id])
+  workEmail        String
+  phone            String
+  jobTitle         String
+  rcNumber         String?
+  proofDocumentUrl String?            // Uploaded CAC certificate or company authorization letter
+  message          String?            @db.Text
+  status           ClaimRequestStatus @default(PENDING)
 
-  // Content details (from AI generation)
-  day           String   // Monday, Tuesday, etc.
-  title         String
-  targetKeyword String?
-  contentType   String?  // evergreen, trending, news, listicle, how-to
-  category      String?
-  priority      String   @default("medium") // high, medium, low
-  estimatedTime String?
-  notes         String?  @db.Text
+  reviewedById String?
+  reviewedBy   User?     @relation("ClaimReviewer", fields: [reviewedById], references: [id])
+  reviewNote   String?   @db.Text
+  reviewedAt   DateTime?
 
-  // Task tracking
-  isCompleted   Boolean  @default(false)
-  completedAt   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Link to actual post if created
-  postId        String?  @unique
+  @@index([companyId, status])
+  @@index([requesterId])
+  @@index([status, createdAt])
+}
 
-  order         Int      @default(0) // For ordering within a day
+model CompanyProduct {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  verticalId     String
+  vertical       Vertical @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name           String   // e.g., "AA3003 Stucco-Embossed Aluminium Roofing Coil"
+  slug           String
+  description    String?  @db.Text
+  specifications Json     @default("{}") // Validated against SpecAttributeDefinition keys
+  unit           String   @default("MT")
+  minOrderQty    Decimal? @db.Decimal(14, 3)
+  indicativeMin  Decimal? @db.Decimal(18, 4)
+  indicativeMax  Decimal? @db.Decimal(18, 4)
+  currency       String   @default("NGN")
+  imageUrl       String?
+  datasheetUrl   String?
+  isActive       Boolean  @default(true)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([calendarId])
-  @@index([day])
-  @@index([isCompleted])
+  @@unique([companyId, slug])
+  @@index([verticalId, categoryId, isActive])
+}
+
+// ============================================================================
+// Pillar 3: Structured RFQ Broadcasting & Procurement Engine (Trndzz Biz)
+// ============================================================================
+
+model Rfq {
+  id                String           @id @default(cuid())
+  referenceNumber   String           @unique // e.g., "RFQ-ALU-2026-00042"
+  verticalId        String
+  vertical          Vertical         @relation(fields: [verticalId], references: [id], onDelete: Restrict)
+  valueChainStageId String?
+  valueChainStage   ValueChainStage? @relation(fields: [valueChainStageId], references: [id], onDelete: SetNull)
+  categoryId        String
+  category          Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // Buyer Identity
+  buyerId           String
+  buyer             User    @relation("BuyerRfqs", fields: [buyerId], references: [id])
+  buyerCompanyName  String
+  buyerContactName  String
+  buyerContactEmail String
+  buyerContactPhone String
+
+  // Technical & Commercial Requirements
+  title                  String   // e.g., "25 MT of 0.55mm AA3003 Stucco-Embossed Aluminium Coils"
+  specifications         Json     @default("{}") // Structured key-value specs validated via Zod
+  additionalNotes        String?  @db.Text
+  attachmentUrl          String?  // Optional BOQ / CAD drawing / spec sheet
+  quantity               Decimal  @db.Decimal(14, 3)
+  unit                   String   // e.g., "MT", "sqm", "sheets"
+  targetUnitPrice        Decimal? @db.Decimal(18, 4)
+  currency               String   @default("NGN")
+  deliveryState          String   // e.g., "Lagos", "Abuja FCT"
+  deliveryCity           String?
+  requiredByDate         DateTime?
+  paymentTermsPreference String?  // e.g., "Bank Guarantee", "70% Advance / 30% on Delivery"
+
+  // Broadcast & Attribution
+  visibility        RfqVisibility @default(VERIFIED_VENDORS_ONLY)
+  status            RfqStatus     @default(PENDING_REVIEW)
+  preferredRoles    BusinessRole[] // e.g., buyer wants [MANUFACTURER, IMPORTER] only
+  sourceArticleId   String?       // Pillar 5 attribution when triggered from a Pulse article
+  sourceArticle     Article?      @relation("ArticleAttributedRfqs", fields: [sourceArticleId], references: [id], onDelete: SetNull)
+  targetCompanyId   String?       // Set when initiated from a specific Company profile
+  targetCompany     Company?      @relation("DirectCompanyRfqs", fields: [targetCompanyId], references: [id], onDelete: SetNull)
+  allowPeerQuotes   Boolean       @default(true) // Allow broadcasting to other pre-qualified suppliers
+  expiresAt         DateTime?
+
+  matches RfqVendorMatch[]
+  quotes  RfqQuote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([verticalId, status, createdAt])
+  @@index([categoryId, status])
+  @@index([buyerId, createdAt])
+  @@index([sourceArticleId])
+  @@index([targetCompanyId])
+}
+
+model RfqVendorMatch {
+  id          String         @id @default(cuid())
+  rfqId       String
+  rfq         Rfq            @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      RfqMatchStatus @default(MATCHED)
+  matchScore  Int            @default(100) // Ranking score from role/category/state/tier match
+  matchReason String?        // e.g., "Verified Aluminium Coil Manufacturer supplying Lagos"
+  notifiedAt  DateTime?
+  viewedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rfqId, companyId])
+  @@index([companyId, status, createdAt])
+}
+
+model RfqQuote {
+  id              String         @id @default(cuid())
+  rfqId           String
+  rfq             Rfq            @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  submittedById   String
+  submittedBy     User           @relation(fields: [submittedById], references: [id])
+
+  unitPrice       Decimal        @db.Decimal(18, 4)
+  totalPrice      Decimal        @db.Decimal(18, 4)
+  currency        String         @default("NGN")
+  minimumOrderQty Decimal?       @db.Decimal(14, 3)
+  leadTimeDays    Int            // Estimated production/delivery lead time in days
+  validUntil      DateTime
+  paymentTerms    String         // e.g., "50% Deposit, 50% Prior to Dispatch"
+  complianceNotes String?        @db.Text // Spec confirmations, alloy/mill test cert availability
+  attachmentUrl   String?        // Formal proforma invoice / mill test certificate PDF
+  status          RfqQuoteStatus @default(SUBMITTED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rfqId, companyId])
+  @@index([rfqId, status])
+  @@index([companyId, createdAt])
+}
+
+// ============================================================================
+// Pillar 5: Contextual Cross-Linking Architecture
+// ============================================================================
+
+model ArticleCompanyMention {
+  id           String  @id @default(cuid())
+  articleId    String
+  article      Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  companyId    String
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contextLabel String? // e.g., "Featured Extruder", "Quoted Importer"
+  displayOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, companyId])
+  @@index([companyId])
+}
+
+// ============================================================================
+// Platform Metrics Cache (B2B Social Proof Singleton)
+// ============================================================================
+
+model PlatformStats {
+  id                 String   @id @default("singleton")
+  activeVerticals    Int      @default(1)
+  indexedCompanies   Int      @default(0)
+  verifiedSuppliers  Int      @default(0)
+  openRfqsCount      Int      @default(0)
+  monthlyReaders     Int      @default(0) // Cached from PostHog
+  updatedAt          DateTime @updatedAt
 }
