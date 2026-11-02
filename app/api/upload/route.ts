@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { verifySessionToken, getTokenFromCookies } from '@/lib/auth/session';
 import sharp from 'sharp';
+import { auth } from '@/lib/auth/auth';
 
 export const runtime = 'nodejs';
 
-// Max file size after compression: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
-// Initialize S3 client for DigitalOcean Spaces (S3-compatible)
 const s3Client = new S3Client({
 	region: process.env.AWS_REGION || 'us-east-1',
 	credentials: {
@@ -23,9 +21,11 @@ const FOLDER_NAME = 'trndzz';
 
 export async function POST(request: NextRequest) {
 	try {
-		// Verify authentication
-		const token = await getTokenFromCookies();
-		if (!(await verifySessionToken(token))) {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.user?.id) {
 			return NextResponse.json(
 				{ success: false, message: 'Unauthorized' },
 				{ status: 401 }
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate file type
 		if (!ALLOWED_TYPES.includes(file.type)) {
 			return NextResponse.json(
 				{
@@ -54,16 +53,13 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Convert file to buffer
 		const bytes = await file.arrayBuffer();
 		const originalBuffer = Buffer.from(bytes);
 
-		// Compress and convert to WebP
 		const compressedBuffer = await sharp(originalBuffer)
-			.webp({ quality: 85 }) // High quality WebP compression
+			.webp({ quality: 85 })
 			.toBuffer();
 
-		// Validate compressed file size
 		if (compressedBuffer.length > MAX_FILE_SIZE) {
 			return NextResponse.json(
 				{
@@ -74,15 +70,13 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Generate unique filename using slug + timestamp (always .webp)
 		const timestamp = Date.now();
 		const slugPart = slug
 			? slug.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
-			: 'image';
+			: 'asset';
 		const filename = `${slugPart}-${timestamp}.webp`;
 		const key = `${FOLDER_NAME}/${filename}`;
 
-		// Upload to S3/DigitalOcean Spaces
 		const command = new PutObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: key,
@@ -93,7 +87,6 @@ export async function POST(request: NextRequest) {
 
 		await s3Client.send(command);
 
-		// Generate public URL
 		const url = `https://${BUCKET_NAME}.s3.${
 			process.env.AWS_REGION || 'us-east-1'
 		}.amazonaws.com/${key}`;
@@ -106,11 +99,6 @@ export async function POST(request: NextRequest) {
 				filename,
 				size: compressedBuffer.length,
 				type: 'image/webp',
-				originalSize: file.size,
-				compressionRatio:
-					((1 - compressedBuffer.length / file.size) * 100).toFixed(
-						2
-					) + '%',
 			},
 		});
 	} catch (error) {
