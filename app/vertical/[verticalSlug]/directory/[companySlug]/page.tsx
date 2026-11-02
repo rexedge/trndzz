@@ -5,6 +5,7 @@ import {
 	Award,
 	Building2,
 	CheckCircle2,
+	FileText,
 	Globe,
 	MapPin,
 	Package,
@@ -14,6 +15,7 @@ import {
 import { ClaimStatus, VerificationTier } from '@prisma/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AddToRfqCartButton } from '@/components/biz/rfq-cart-drawer';
 import { ContextualRfqDrawer } from '@/components/cross-link/contextual-rfq-drawer';
 import {
 	JsonLd,
@@ -369,9 +371,25 @@ export default async function VerticalCompanyProfilePage({
 											))}
 										</div>
 									)}
+
+									{prod.datasheetUrl && (
+										<div className='mt-3'>
+											<a
+												href={prod.datasheetUrl}
+												target='_blank'
+												rel='noopener noreferrer'
+												className='inline-flex items-center gap-1.5 text-xs font-semibold text-vertical hover:underline'
+											>
+												<FileText className='h-3.5 w-3.5' />
+												<span>
+													Download Technical Datasheet (PDF)
+												</span>
+											</a>
+										</div>
+									)}
 								</div>
 
-								<div className='mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4 text-xs'>
+								<div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs'>
 									<div>
 										<span className='text-muted-foreground'>
 											Indicative Ex-Works:{' '}
@@ -392,13 +410,33 @@ export default async function VerticalCompanyProfilePage({
 												Quote on RFQ
 											</span>
 										)}
+										{prod.minOrderQty && (
+											<span className='font-tabular ml-2 text-muted-foreground'>
+												(MOQ:{' '}
+												{formatNumber(prod.minOrderQty)}{' '}
+												{prod.unit})
+											</span>
+										)}
 									</div>
-									{prod.minOrderQty && (
-										<span className='font-tabular text-muted-foreground'>
-											MOQ: {formatNumber(prod.minOrderQty)}{' '}
-											{prod.unit}
-										</span>
-									)}
+
+									<AddToRfqCartButton
+										item={{
+											productId: prod.id,
+											productName: prod.name,
+											verticalId: vertical.id,
+											verticalSlug: vertical.slug,
+											categoryId: prod.category.id,
+											categorySlug: prod.category.slug,
+											categoryName: prod.category.name,
+											companyId: company.id,
+											companyName: company.name,
+											unit: prod.unit,
+											quantity: prod.minOrderQty ?? 10,
+											indicativeMin: prod.indicativeMin,
+											currency: prod.currency,
+											specifications: prod.specifications,
+										}}
+									/>
 								</div>
 							</div>
 						))}

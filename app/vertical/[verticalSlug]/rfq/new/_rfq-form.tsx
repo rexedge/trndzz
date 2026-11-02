@@ -62,7 +62,7 @@ export function RfqBroadcastForm({
 		categories[0];
 
 	const [categoryId, setCategoryId] = useState(initialCat?.id ?? '');
-	const [title, setTitle] = useState('');
+	const [title, setTitle] = useState(draft.title ?? '');
 	const [buyerCompanyName, setBuyerCompanyName] = useState(
 		user.companyName ?? ''
 	);
@@ -71,8 +71,10 @@ export function RfqBroadcastForm({
 	const [buyerContactPhone, setBuyerContactPhone] = useState(
 		user.phone ?? ''
 	);
-	const [quantity, setQuantity] = useState('25');
-	const [unit, setUnit] = useState(initialCat?.defaultUnit ?? 'MT');
+	const [quantity, setQuantity] = useState(draft.quantity ?? '25');
+	const [unit, setUnit] = useState(
+		draft.unit ?? initialCat?.defaultUnit ?? 'MT'
+	);
 	const [targetUnitPrice, setTargetUnitPrice] = useState('');
 	const [deliveryState, setDeliveryState] = useState('Lagos');
 	const [deliveryCity, setDeliveryCity] = useState('');
@@ -87,7 +89,9 @@ export function RfqBroadcastForm({
 		BusinessRole.MANUFACTURER,
 		BusinessRole.IMPORTER,
 	]);
-	const [additionalNotes, setAdditionalNotes] = useState('');
+	const [additionalNotes, setAdditionalNotes] = useState(
+		draft.additionalNotes ?? ''
+	);
 	const [specs, setSpecs] = useState<Record<string, string>>(
 		draft.specifications
 	);

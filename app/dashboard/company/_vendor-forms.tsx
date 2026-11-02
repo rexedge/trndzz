@@ -225,6 +225,7 @@ export function VendorProductPublisher({
 	const [minOrderQty, setMinOrderQty] = useState('');
 	const [indicativeMin, setIndicativeMin] = useState('');
 	const [indicativeMax, setIndicativeMax] = useState('');
+	const [datasheetUrl, setDatasheetUrl] = useState('');
 	const [specs, setSpecs] = useState<Record<string, string>>({});
 
 	const activeSpecs = specDefinitions.filter(
@@ -249,6 +250,7 @@ export function VendorProductPublisher({
 					? Number(indicativeMax)
 					: undefined,
 				currency: 'NGN',
+				datasheetUrl,
 				specifications: specs,
 			});
 
@@ -259,6 +261,7 @@ export function VendorProductPublisher({
 			toast.success(res.message);
 			setName('');
 			setDescription('');
+			setDatasheetUrl('');
 			router.refresh();
 		});
 	};
@@ -399,6 +402,19 @@ export function VendorProductPublisher({
 						className='font-tabular'
 					/>
 				</div>
+			</div>
+
+			<div className='space-y-1.5'>
+				<Label htmlFor='sku-datasheet'>
+					Technical Datasheet / Mill Test Certificate URL (PDF, Optional)
+				</Label>
+				<Input
+					id='sku-datasheet'
+					type='url'
+					value={datasheetUrl}
+					onChange={(e) => setDatasheetUrl(e.target.value)}
+					placeholder='https://...'
+				/>
 			</div>
 
 			<div className='space-y-1.5'>

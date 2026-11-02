@@ -8,6 +8,10 @@ export interface RfqPrefillDraft {
 	sourceArticleTitle: string | null;
 	targetCompanyId: string | null;
 	targetCompanyName: string | null;
+	title: string | null;
+	quantity: string | null;
+	unit: string | null;
+	additionalNotes: string | null;
 	specifications: Record<string, string>;
 }
 
@@ -25,6 +29,10 @@ const initialDraft: RfqPrefillDraft = {
 	sourceArticleTitle: null,
 	targetCompanyId: null,
 	targetCompanyName: null,
+	title: null,
+	quantity: null,
+	unit: null,
+	additionalNotes: null,
 	specifications: {},
 };
 
@@ -36,4 +44,3 @@ export const useRfqDraftStore = create<RfqDraftState>((set) => ({
 		})),
 	resetDraft: () => set({ draft: initialDraft }),
 }));
-

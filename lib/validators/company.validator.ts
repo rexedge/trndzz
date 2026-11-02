@@ -102,6 +102,12 @@ export const createCompanyProductSchema = z.object({
 	indicativeMin: z.coerce.number().positive().optional(),
 	indicativeMax: z.coerce.number().positive().optional(),
 	currency: z.string().trim().length(3).default('NGN'),
+	datasheetUrl: z
+		.string()
+		.trim()
+		.url('Enter a valid datasheet URL')
+		.optional()
+		.or(z.literal('')),
 	specifications: z.record(z.string(), z.string()).default({}),
 });
 

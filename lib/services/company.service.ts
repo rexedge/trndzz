@@ -188,6 +188,7 @@ export async function getVerticalCompanyProfile(
 			indicativeMax:
 				p.indicativeMax !== null ? Number(p.indicativeMax) : null,
 			currency: p.currency,
+			datasheetUrl: p.datasheetUrl,
 			category: p.category,
 		})),
 	};
@@ -197,6 +198,8 @@ export async function listVerticalCatalogProducts(params: {
 	verticalId: string;
 	categorySlug?: string;
 	query?: string;
+	specKey?: string;
+	specValue?: string;
 }) {
 	const rows = await prisma.companyProduct.findMany({
 		where: {
@@ -205,24 +208,6 @@ export async function listVerticalCatalogProducts(params: {
 			company: { isPublished: true },
 			...(params.categorySlug
 				? { category: { slug: params.categorySlug } }
-				: {}),
-			...(params.query
-				? {
-						OR: [
-							{
-								name: {
-									contains: params.query,
-									mode: 'insensitive',
-								},
-							},
-							{
-								description: {
-									contains: params.query,
-									mode: 'insensitive',
-								},
-							},
-						],
-					}
 				: {}),
 		},
 		orderBy: [
@@ -244,22 +229,44 @@ export async function listVerticalCatalogProducts(params: {
 		},
 	});
 
-	return rows.map((p) => ({
-		id: p.id,
-		name: p.name,
-		slug: p.slug,
-		description: p.description,
-		specifications: (p.specifications as Record<string, string>) ?? {},
-		unit: p.unit,
-		minOrderQty: p.minOrderQty !== null ? Number(p.minOrderQty) : null,
-		indicativeMin:
-			p.indicativeMin !== null ? Number(p.indicativeMin) : null,
-		indicativeMax:
-			p.indicativeMax !== null ? Number(p.indicativeMax) : null,
-		currency: p.currency,
-		category: p.category,
-		company: p.company,
-	}));
+	const qLower = params.query?.trim().toLowerCase();
+	const sKey = params.specKey?.trim();
+	const sVal = params.specValue?.trim().toLowerCase();
+
+	return rows
+		.map((p) => ({
+			id: p.id,
+			name: p.name,
+			slug: p.slug,
+			description: p.description,
+			specifications: (p.specifications as Record<string, string>) ?? {},
+			unit: p.unit,
+			minOrderQty: p.minOrderQty !== null ? Number(p.minOrderQty) : null,
+			indicativeMin:
+				p.indicativeMin !== null ? Number(p.indicativeMin) : null,
+			indicativeMax:
+				p.indicativeMax !== null ? Number(p.indicativeMax) : null,
+			currency: p.currency,
+			datasheetUrl: p.datasheetUrl,
+			category: p.category,
+			company: p.company,
+		}))
+		.filter((item) => {
+			if (sKey && sVal) {
+				const actual = item.specifications[sKey]?.toLowerCase() ?? '';
+				if (!actual.includes(sVal)) return false;
+			}
+			if (qLower) {
+				const specHaystack = Object.entries(item.specifications)
+					.map(([k, v]) => `${k} ${v}`)
+					.join(' ')
+					.toLowerCase();
+				const textHaystack =
+					`${item.name} ${item.description ?? ''} ${item.category.name} ${item.company.name} ${specHaystack}`.toLowerCase();
+				if (!textHaystack.includes(qLower)) return false;
+			}
+			return true;
+		});
 }
 
 export async function seedDirectoryCompany(input: SeedCompanyInput) {
@@ -366,6 +373,7 @@ export async function createVendorProduct(input: CreateCompanyProductInput) {
 			indicativeMin: input.indicativeMin?.toFixed(4),
 			indicativeMax: input.indicativeMax?.toFixed(4),
 			currency: input.currency.toUpperCase(),
+			datasheetUrl: input.datasheetUrl || null,
 		},
 	});
 }
