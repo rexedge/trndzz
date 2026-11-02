@@ -1,32 +1,26 @@
 'use client';
 
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-interface Props {
+export default function AdminError({
+	error,
+	reset,
+}: {
 	error: Error & { digest?: string };
 	reset: () => void;
-}
-
-export default function Error({ error, reset }: Props) {
+}) {
 	return (
-		<main className='min-h-screen px-6 py-12'>
-			<div className='mx-auto flex max-w-2xl flex-col gap-4'>
-				<div>
-					<p className='text-sm font-medium text-destructive'>
-						Admin failed to load
-					</p>
-					<p className='text-muted-foreground'>
-						{error?.message ?? 'Please try again.'}
-					</p>
-				</div>
-				<div className='flex flex-wrap gap-3'>
-					<Button onClick={reset}>Retry</Button>
-					<Button asChild variant='ghost'>
-						<Link href='/'>Back to home</Link>
-					</Button>
-				</div>
-			</div>
-		</main>
+		<div className='rounded-xl border border-border bg-card p-8 text-center'>
+			<h2 className='text-lg font-bold'>Admin console error</h2>
+			<p className='mt-2 text-sm text-muted-foreground'>
+				{error.message || 'Unable to load admin command center.'}
+			</p>
+			<Button
+				onClick={reset}
+				className='mt-5'
+			>
+				Retry
+			</Button>
+		</div>
 	);
 }

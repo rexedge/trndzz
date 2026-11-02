@@ -1,20 +1,16 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export default function NotFound() {
+export default function AdminNotFound() {
 	return (
-		<main className='min-h-screen px-6 py-12'>
-			<div className='mx-auto flex max-w-2xl flex-col gap-4'>
-				<div>
-					<h1 className='text-2xl font-semibold'>Page not found</h1>
-					<p className='text-muted-foreground'>
-						The admin page is unavailable.
-					</p>
-				</div>
-				<Button asChild>
-					<Link href='/'>Back to home</Link>
-				</Button>
-			</div>
-		</main>
+		<div className='rounded-xl border border-border bg-card p-8 text-center'>
+			<h1 className='text-xl font-bold'>Admin module not found</h1>
+			<Button
+				asChild
+				className='mt-5'
+			>
+				<Link href='/admin'>Back to Command Center</Link>
+			</Button>
+		</div>
 	);
 }
