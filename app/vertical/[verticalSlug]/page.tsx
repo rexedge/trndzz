@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import {
 	Award,
+	BookOpen,
 	Building2,
 	CheckCircle2,
 	FileSpreadsheet,
+	Lock,
 	MapPin,
 	Newspaper,
 	ShieldAlert,
@@ -11,6 +13,7 @@ import {
 import { ClaimStatus, VerificationTier } from '@prisma/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { listVerticalResources } from '@/lib/services/learn.service';
 import { getVerticalHomeOverview } from '@/lib/services/vertical.service';
 import { resolveRequiredVertical } from '@/lib/services/tenant-context';
 import { formatNumber } from '@/lib/utils/format';
@@ -23,9 +26,11 @@ export default async function VerticalPortalHomePage({
 	const { verticalSlug } = await params;
 	const { vertical } = await resolveRequiredVertical(verticalSlug);
 
-	const { articles, companies, openRfqs } = await getVerticalHomeOverview(
-		vertical.id
-	);
+	const [{ articles, companies, openRfqs }, learnResources] =
+		await Promise.all([
+			getVerticalHomeOverview(vertical.id),
+			listVerticalResources({ verticalId: vertical.id }),
+		]);
 
 	return (
 		<div className='mx-auto max-w-7xl space-y-14 px-4 py-10 sm:px-6 lg:px-8'>
@@ -476,6 +481,67 @@ export default async function VerticalPortalHomePage({
 					</div>
 				)}
 			</section>
+
+			{/* Pillar 4: Trndzz Learn (Gated Whitepapers & Regulatory Handbooks) */}
+			{learnResources.length > 0 && (
+				<section id='learn' className='space-y-5'>
+					<div className='flex items-center justify-between'>
+						<div className='flex items-center gap-2'>
+							<BookOpen className='h-5 w-5 text-vertical' />
+							<h2 className='text-2xl font-bold tracking-tight'>
+								Trndzz Learn · {vertical.name} Technical Dossiers
+							</h2>
+						</div>
+						<Link
+							href='/learn'
+							className='text-xs font-semibold text-vertical hover:underline'
+						>
+							All Dossiers →
+						</Link>
+					</div>
+
+					<div className='grid gap-6 md:grid-cols-2'>
+						{learnResources.slice(0, 2).map((res) => (
+							<Link
+								key={res.id}
+								href={`/learn/${res.slug}`}
+								className='flex flex-col justify-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-vertical/60'
+							>
+								<div>
+									<div className='flex items-center justify-between gap-2'>
+										<Badge variant='secondary'>
+											{res.type.replace(/_/g, ' ')}
+										</Badge>
+										{res.isGated && (
+											<span className='inline-flex items-center gap-1 text-xs text-amber font-medium'>
+												<Lock className='h-3.5 w-3.5' />
+												Gated Report
+											</span>
+										)}
+									</div>
+									<h3 className='mt-3 text-lg font-bold leading-snug'>
+										{res.title}
+									</h3>
+									<p className='mt-1.5 text-xs text-muted-foreground line-clamp-2'>
+										{res.summary}
+									</p>
+								</div>
+
+								<div className='mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground font-tabular'>
+									<span>
+										{res.pageCount
+											? `${res.pageCount} pages`
+											: 'Technical Dossier'}
+									</span>
+									<span className='font-semibold text-foreground'>
+										Read Preview & Unlock →
+									</span>
+								</div>
+							</Link>
+						))}
+					</div>
+				</section>
+			)}
 		</div>
 	);
 }

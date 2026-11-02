@@ -54,10 +54,10 @@
 ---
 
 ## Horizon 1 — Phase 2: Storefronts, *Trndzz Learn* & Verticals #2–#3
-- [ ] Expand *Trndzz Biz* `/products` into full multi-vendor specification-searchable storefronts with datasheet downloads & multi-item RFQ cart
-- [ ] Add *Trndzz Learn* Prisma models (`KnowledgeResource`, `ResourceLead`) and build `/learn` gated whitepapers, quarterly sector outlook reports & B2B lead capture
-- [ ] Build Ecosystem Semantic Search (`/search` powered by OpenAI embeddings across articles, suppliers, products & public RFQs)
-- [ ] Provision Verticals #2 and #3 (`steel.trndzz.com` and `solar.trndzz.com`) via `/admin/verticals` with zero codebase overhead
+- [x] Expand *Trndzz Biz* `/products` into full multi-vendor specification-searchable storefronts with datasheet downloads & multi-item RFQ cart
+- [x] Add *Trndzz Learn* Prisma models (`KnowledgeResource`, `ResourceLead`) and build `/learn` gated whitepapers, quarterly sector outlook reports & B2B lead capture
+- [x] Build Ecosystem Semantic Search (`/search` powered by OpenAI embeddings/query intent expansion across articles, suppliers, products & public RFQs)
+- [x] Provision Verticals #2 and #3 (`steel.trndzz.com` and `solar.trndzz.com`) via `/admin/verticals` & `prisma/seed.ts` with zero codebase overhead
 
 ---
 

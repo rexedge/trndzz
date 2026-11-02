@@ -1,10 +1,16 @@
 import Link from 'next/link';
-import { ArrowLeft, FileSpreadsheet, Layers } from 'lucide-react';
+import {
+	ArrowLeft,
+	FileSpreadsheet,
+	Layers,
+	Search,
+} from 'lucide-react';
 import type { ValueChainStage } from '@prisma/client';
+import { RfqCartDrawer } from '@/components/biz/rfq-cart-drawer';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/macro/theme-toggle';
 import { getCurrentUser } from '@/lib/auth/guards';
-import { buildMacroUrl } from '@/lib/tenancy/host';
+import { buildMacroUrl, buildVerticalUrl } from '@/lib/tenancy/host';
 
 interface VerticalHeaderProps {
 	verticalName: string;
@@ -29,17 +35,30 @@ export async function VerticalHeader({
 						className='inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors'
 					>
 						<ArrowLeft className='h-3.5 w-3.5' />
-						<span>TRNDZZ Macro Intelligence Hub</span>
+						<span>TRNDZZ Macro Hub</span>
 					</a>
-					<span className='font-tabular hidden sm:inline text-muted-foreground'>
-						{verticalSlug}.trndzz.com
-					</span>
+
+					<div className='hidden md:flex items-center gap-4 text-[11px] font-tabular text-muted-foreground'>
+						{(['aluminium', 'steel', 'solar'] as const).map((slug) => (
+							<a
+								key={slug}
+								href={buildVerticalUrl(slug, '/')}
+								className={
+									slug === verticalSlug
+										? 'font-bold text-foreground'
+										: 'hover:text-foreground transition-colors'
+								}
+							>
+								{slug}.trndzz.com
+							</a>
+						))}
+					</div>
 				</div>
 			</div>
 
 			{/* Main Vertical Masthead */}
 			<div className='mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8'>
-				<div className='flex items-center gap-7'>
+				<div className='flex items-center gap-6'>
 					<Link href='/' className='flex items-center gap-2.5'>
 						<div className='flex h-9 w-9 items-center justify-center rounded-lg bg-vertical text-white'>
 							<Layers className='h-5 w-5' />
@@ -57,7 +76,7 @@ export async function VerticalHeader({
 						</div>
 					</Link>
 
-					<nav className='hidden lg:flex items-center gap-5 text-sm font-medium text-muted-foreground'>
+					<nav className='hidden xl:flex items-center gap-4 text-sm font-medium text-muted-foreground'>
 						<Link
 							href='/'
 							className='hover:text-foreground transition-colors'
@@ -68,19 +87,19 @@ export async function VerticalHeader({
 							href='/pulse'
 							className='hover:text-foreground transition-colors'
 						>
-							Trndzz Pulse
+							Pulse
 						</Link>
 						<Link
 							href='/prices'
 							className='hover:text-foreground transition-colors'
 						>
-							Price Trackers
+							Prices
 						</Link>
 						<Link
 							href='/directory'
 							className='hover:text-foreground transition-colors'
 						>
-							Supplier Directory
+							Directory
 						</Link>
 						<Link
 							href='/products'
@@ -94,13 +113,41 @@ export async function VerticalHeader({
 						>
 							Live RFQs
 						</Link>
+						<Link
+							href='/learn'
+							className='hover:text-foreground transition-colors'
+						>
+							Learn
+						</Link>
 					</nav>
 				</div>
 
-				<div className='flex items-center gap-2.5'>
+				<div className='flex items-center gap-2'>
+					<Button
+						asChild
+						variant='ghost'
+						size='icon'
+						aria-label={`Search ${verticalName} Portal`}
+					>
+						<Link href='/search'>
+							<Search className='h-4 w-4' />
+						</Link>
+					</Button>
+
+					<RfqCartDrawer
+						verticalSlug={verticalSlug}
+						verticalName={verticalName}
+					/>
+
 					<ThemeToggle />
+
 					{user ? (
-						<Button asChild variant='outline' size='sm'>
+						<Button
+							asChild
+							variant='outline'
+							size='sm'
+							className='hidden sm:inline-flex'
+						>
 							<a href={buildMacroUrl('/dashboard')}>Workspace</a>
 						</Button>
 					) : (
@@ -113,6 +160,7 @@ export async function VerticalHeader({
 							<a href={buildMacroUrl('/auth/login')}>Sign In</a>
 						</Button>
 					)}
+
 					<Button
 						asChild
 						size='sm'
@@ -120,7 +168,10 @@ export async function VerticalHeader({
 					>
 						<Link href='/rfq/new'>
 							<FileSpreadsheet className='h-4 w-4' />
-							Broadcast RFQ
+							<span className='hidden sm:inline'>
+								Broadcast RFQ
+							</span>
+							<span className='sm:hidden'>RFQ</span>
 						</Link>
 					</Button>
 				</div>

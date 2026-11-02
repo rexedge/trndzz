@@ -23,10 +23,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			changeFrequency: 'hourly',
 			priority: 0.9,
 		},
+		{
+			url: buildMacroUrl('/learn'),
+			lastModified: new Date(),
+			changeFrequency: 'daily',
+			priority: 0.9,
+		},
+		{
+			url: buildMacroUrl('/search'),
+			lastModified: new Date(),
+			changeFrequency: 'daily',
+			priority: 0.8,
+		},
 	];
 
 	try {
-		const [verticals, articles, companies] = await Promise.all([
+		const [verticals, articles, companies, resources] = await Promise.all([
 			prisma.vertical.findMany({
 				where: { status: VerticalStatus.ACTIVE },
 				select: { slug: true, updatedAt: true },
@@ -54,6 +66,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 				},
 				take: 1000,
 			}),
+			prisma.knowledgeResource.findMany({
+				where: { isPublished: true },
+				select: {
+					slug: true,
+					updatedAt: true,
+					vertical: { select: { slug: true } },
+				},
+				take: 250,
+			}),
 		]);
 
 		for (const v of verticals) {
@@ -64,6 +85,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 				'/directory',
 				'/products',
 				'/rfq',
+				'/learn',
+				'/search',
 			]) {
 				entries.push({
 					url: buildVerticalUrl(v.slug, subPath),
@@ -91,6 +114,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			entries.push({
 				url: buildVerticalUrl(primarySlug, `/directory/${c.slug}`),
 				lastModified: c.updatedAt,
+				changeFrequency: 'weekly',
+				priority: 0.85,
+			});
+		}
+
+		for (const r of resources) {
+			const vSlug = r.vertical?.slug ?? 'aluminium';
+			entries.push({
+				url: buildVerticalUrl(vSlug, `/learn/${r.slug}`),
+				lastModified: r.updatedAt,
 				changeFrequency: 'weekly',
 				priority: 0.85,
 			});

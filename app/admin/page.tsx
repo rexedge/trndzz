@@ -5,6 +5,7 @@ import {
 	RfqStatus,
 } from '@prisma/client';
 import {
+	BookOpen,
 	Building2,
 	FileSpreadsheet,
 	Layers,
@@ -27,6 +28,8 @@ export default async function AdminCommandCenterPage() {
 		unclaimedCount,
 		pendingClaimCount,
 		openRfqCount,
+		learnResourceCount,
+		resourceLeadCount,
 	] = await Promise.all([
 		prisma.vertical.count(),
 		prisma.article.count(),
@@ -41,6 +44,8 @@ export default async function AdminCommandCenterPage() {
 		prisma.rfq.count({
 			where: { status: { in: [RfqStatus.OPEN, RfqStatus.QUOTING] } },
 		}),
+		prisma.knowledgeResource.count(),
+		prisma.resourceLead.count(),
 	]);
 
 	const modules = [
@@ -85,6 +90,13 @@ export default async function AdminCommandCenterPage() {
 			value: openRfqCount,
 			sub: 'Audit buyer broadcasts, vendor match scores & submitted quotes',
 			icon: FileSpreadsheet,
+		},
+		{
+			href: '/admin/learn',
+			label: 'Trndzz Learn & B2B Leads',
+			value: learnResourceCount,
+			sub: `${formatNumber(resourceLeadCount)} gated whitepaper buyer leads captured`,
+			icon: BookOpen,
 		},
 	];
 

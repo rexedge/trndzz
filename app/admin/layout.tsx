@@ -14,6 +14,7 @@ const ADMIN_LINKS = [
 	{ href: '/admin/directory', label: 'Directory Seeder' },
 	{ href: '/admin/claims', label: 'Claim Queue' },
 	{ href: '/admin/rfqs', label: 'RFQ Monitor' },
+	{ href: '/admin/learn', label: 'Learn & Leads' },
 ];
 
 export default async function AdminLayout({
