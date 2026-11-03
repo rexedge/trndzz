@@ -12,6 +12,10 @@ import type {
 	SeedCompanyInput,
 	UpdateVendorProfileInput,
 } from '@/lib/validators/company.validator';
+import {
+	parseCsvToObjects,
+	parsedBulkSupplierRowSchema,
+} from '@/lib/validators/bulk-seed.validator';
 
 export interface SearchVerticalCompaniesParams {
 	verticalId: string;
@@ -323,6 +327,219 @@ export async function seedDirectoryCompany(input: SeedCompanyInput) {
 
 	await refreshPlatformStatsCache().catch(() => null);
 	return created;
+}
+
+export interface BulkSeedSummary {
+	totalRows: number;
+	createdCount: number;
+	updatedCount: number;
+	rowErrors: string[];
+}
+
+function toCompanySlug(raw: string): string {
+	return raw
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '')
+		.slice(0, 140);
+}
+
+export async function bulkSeedDirectoryCompanies(
+	csvText: string
+): Promise<BulkSeedSummary> {
+	const rawRows = parseCsvToObjects(csvText);
+	if (rawRows.length === 0) {
+		throw new Error(
+			'No valid CSV data rows found. Ensure the first line contains the column headers.'
+		);
+	}
+	if (rawRows.length > 250) {
+		throw new Error(
+			`Batch has ${rawRows.length} rows; maximum allowed per import is 250 rows.`
+		);
+	}
+
+	const verticals = await prisma.vertical.findMany({
+		select: {
+			id: true,
+			slug: true,
+			categories: {
+				select: { id: true, slug: true },
+			},
+		},
+	});
+	const verticalBySlug = new Map(
+		verticals.map((v) => [v.slug.toLowerCase(), v])
+	);
+
+	let createdCount = 0;
+	let updatedCount = 0;
+	const rowErrors: string[] = [];
+
+	for (let i = 0; i < rawRows.length; i++) {
+		const rowNumber = i + 2;
+		const raw = rawRows[i];
+		const parsed = parsedBulkSupplierRowSchema.safeParse(raw);
+
+		if (!parsed.success) {
+			const issue = parsed.error.issues[0];
+			rowErrors.push(
+				`Row ${rowNumber} (${raw.name || 'Unnamed'}): ${issue?.message ?? 'Validation error'}`
+			);
+			continue;
+		}
+
+		const data = parsed.data;
+		const vertical = verticalBySlug.get(data.verticalSlug.toLowerCase());
+		if (!vertical) {
+			rowErrors.push(
+				`Row ${rowNumber} (${data.name}): Unknown verticalSlug "${data.verticalSlug}"`
+			);
+			continue;
+		}
+
+		const catMap = new Map(
+			vertical.categories.map((c) => [c.slug.toLowerCase(), c.id])
+		);
+		const resolvedCategoryIds: string[] = [];
+		let missingCatSlug: string | null = null;
+		for (const cs of data.categorySlugs) {
+			const foundId = catMap.get(cs.toLowerCase());
+			if (!foundId) {
+				missingCatSlug = cs;
+				break;
+			}
+			resolvedCategoryIds.push(foundId);
+		}
+
+		if (missingCatSlug) {
+			rowErrors.push(
+				`Row ${rowNumber} (${data.name}): Unknown categorySlug "${missingCatSlug}" in "${vertical.slug}"`
+			);
+			continue;
+		}
+
+		const slug = toCompanySlug(
+			data.slug && data.slug.trim() ? data.slug : data.name
+		);
+		if (slug.length < 3) {
+			rowErrors.push(
+				`Row ${rowNumber} (${data.name}): Generated slug "${slug}" is too short`
+			);
+			continue;
+		}
+
+		const coverageStates =
+			data.coverageStates.length > 0
+				? data.coverageStates
+				: [data.headquartersState];
+
+		try {
+			await prisma.$transaction(async (tx) => {
+				const existing = await tx.company.findUnique({
+					where: { slug },
+					select: { id: true, claimStatus: true },
+				});
+
+				let companyId: string;
+				if (existing) {
+					await tx.company.update({
+						where: { id: existing.id },
+						data: {
+							name: data.name,
+							tagline: data.tagline || undefined,
+							description: data.description || undefined,
+							businessRoles: data.businessRoles,
+							headquartersState: data.headquartersState,
+							city: data.city || undefined,
+							coverageStates,
+							productionCapacity:
+								data.productionCapacity || undefined,
+							minimumOrderSummary:
+								data.minimumOrderSummary || undefined,
+							publicEmail: data.publicEmail || undefined,
+							publicPhone: data.publicPhone || undefined,
+							websiteUrl: data.websiteUrl || undefined,
+							rcNumber: data.rcNumber || undefined,
+						},
+					});
+					companyId = existing.id;
+					updatedCount++;
+				} else {
+					const created = await tx.company.create({
+						data: {
+							name: data.name,
+							slug,
+							tagline: data.tagline || null,
+							description: data.description || null,
+							businessRoles: data.businessRoles,
+							claimStatus: ClaimStatus.UNCLAIMED,
+							verificationTier: data.verificationTier,
+							headquartersState: data.headquartersState,
+							city: data.city || null,
+							coverageStates,
+							productionCapacity:
+								data.productionCapacity || null,
+							minimumOrderSummary:
+								data.minimumOrderSummary || null,
+							publicEmail: data.publicEmail || null,
+							publicPhone: data.publicPhone || null,
+							websiteUrl: data.websiteUrl || null,
+							rcNumber: data.rcNumber || null,
+							verifiedAt:
+								data.verificationTier !==
+								VerificationTier.UNVERIFIED
+									? new Date()
+									: null,
+						},
+					});
+					companyId = created.id;
+					createdCount++;
+				}
+
+				await tx.companyVertical.upsert({
+					where: {
+						companyId_verticalId: {
+							companyId,
+							verticalId: vertical.id,
+						},
+					},
+					update: {
+						streamPositions: data.streamPositions,
+					},
+					create: {
+						companyId,
+						verticalId: vertical.id,
+						streamPositions: data.streamPositions,
+						isPrimary: true,
+					},
+				});
+
+				await tx.companyCategory.createMany({
+					data: resolvedCategoryIds.map((categoryId) => ({
+						companyId,
+						categoryId,
+					})),
+					skipDuplicates: true,
+				});
+			});
+		} catch (err) {
+			rowErrors.push(
+				`Row ${rowNumber} (${data.name}): ${err instanceof Error ? err.message : 'Database upsert failed'}`
+			);
+		}
+	}
+
+	if (createdCount > 0 || updatedCount > 0) {
+		await refreshPlatformStatsCache().catch(() => null);
+	}
+
+	return {
+		totalRows: rawRows.length,
+		createdCount,
+		updatedCount,
+		rowErrors,
+	};
 }
 
 export async function updateClaimedVendorProfile(

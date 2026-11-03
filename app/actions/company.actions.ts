@@ -4,10 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { CompanyMemberRole, UserRole } from '@prisma/client';
 import { guardCompanyAccess, guardPlatformRole } from '@/lib/auth/guards';
 import {
+	bulkSeedDirectoryCompanies,
+	type BulkSeedSummary,
 	createVendorProduct,
 	seedDirectoryCompany,
 	updateClaimedVendorProfile,
 } from '@/lib/services/company.service';
+import { bulkSeedCsvPayloadSchema } from '@/lib/validators/bulk-seed.validator';
 import {
 	createCompanyProductSchema,
 	seedCompanySchema,
@@ -57,6 +60,49 @@ export async function seedDirectoryCompanyAction(
 				error instanceof Error
 					? error.message
 					: 'Could not seed directory company (slug may already exist).',
+		};
+	}
+}
+
+export async function bulkSeedDirectoryCompaniesAction(rawInput: {
+	csvText: string;
+}): Promise<ActionResponse<BulkSeedSummary>> {
+	try {
+		const guard = await guardPlatformRole([
+			UserRole.SUPER_ADMIN,
+			UserRole.EDITOR,
+			UserRole.ANALYST,
+		]);
+		if (!guard.ok) return guard.response;
+
+		const parsed = bulkSeedCsvPayloadSchema.safeParse(rawInput);
+		if (!parsed.success) {
+			return {
+				success: false,
+				message:
+					parsed.error.issues[0]?.message ??
+					'Provide valid CSV supplier rows.',
+			};
+		}
+
+		const summary = await bulkSeedDirectoryCompanies(parsed.data.csvText);
+
+		revalidatePath('/');
+		revalidatePath('/admin/directory');
+		revalidatePath('/vertical/[verticalSlug]', 'layout');
+
+		return {
+			success: true,
+			message: `Processed ${summary.totalRows} row(s): ${summary.createdCount} created, ${summary.updatedCount} updated${summary.rowErrors.length > 0 ? `, ${summary.rowErrors.length} skipped` : ''}.`,
+			data: summary,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message:
+				error instanceof Error
+					? error.message
+					: 'Bulk CSV supplier import failed.',
 		};
 	}
 }

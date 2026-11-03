@@ -7,10 +7,17 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from '@/components/ui/tabs';
 import { requirePlatformStaff } from '@/lib/auth/guards';
 import { prisma } from '@/lib/prisma/client';
 import { listAdminDirectoryCompanies } from '@/lib/services/company.service';
 import { buildVerticalUrl } from '@/lib/tenancy/host';
+import { BulkCsvDirectoryImporter } from './_bulk-csv-importer';
 import { DirectoryCompanySeeder } from './_company-seeder';
 
 export default async function AdminDirectoryPage() {
@@ -23,7 +30,7 @@ export default async function AdminDirectoryPage() {
 			include: {
 				categories: {
 					orderBy: { displayOrder: 'asc' },
-					select: { id: true, name: true },
+					select: { id: true, name: true, slug: true },
 				},
 			},
 		}),
@@ -36,18 +43,48 @@ export default async function AdminDirectoryPage() {
 					Supplier Directory Seeder & Registry
 				</h1>
 				<p className='mt-1 text-sm text-muted-foreground'>
-					Onboard pre-seeded industrial suppliers and monitor the
-					Claim & Convert pipeline across verticals.
+					Onboard pre-seeded industrial suppliers (single or bulk CSV)
+					and monitor the Claim &amp; Convert pipeline across
+					verticals.
 				</p>
 			</div>
 
-			<DirectoryCompanySeeder
-				verticals={verticals.map((v) => ({
-					id: v.id,
-					name: v.name,
-					categories: v.categories,
-				}))}
-			/>
+			<Tabs defaultValue='bulk-csv' className='space-y-4'>
+				<TabsList>
+					<TabsTrigger value='bulk-csv'>
+						Bulk CSV Importer (Batch)
+					</TabsTrigger>
+					<TabsTrigger value='single'>
+						Single Supplier Form
+					</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value='bulk-csv'>
+					<BulkCsvDirectoryImporter
+						verticals={verticals.map((v) => ({
+							slug: v.slug,
+							name: v.name,
+							categories: v.categories.map((c) => ({
+								slug: c.slug,
+								name: c.name,
+							})),
+						}))}
+					/>
+				</TabsContent>
+
+				<TabsContent value='single'>
+					<DirectoryCompanySeeder
+						verticals={verticals.map((v) => ({
+							id: v.id,
+							name: v.name,
+							categories: v.categories.map((c) => ({
+								id: c.id,
+								name: c.name,
+							})),
+						}))}
+					/>
+				</TabsContent>
+			</Tabs>
 
 			<section className='rounded-2xl border border-border bg-card p-6 space-y-4'>
 				<h2 className='text-lg font-bold'>
