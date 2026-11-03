@@ -70,7 +70,10 @@ export const createKnowledgeResourceSchema = z.object({
 	fileUrl: z
 		.string()
 		.trim()
-		.url('Enter a valid PDF / document URL')
+		.refine(
+			(v) => !v || v.startsWith('/') || /^https?:\/\//i.test(v),
+			'Enter a valid PDF URL or /api/documents/... path'
+		)
 		.optional()
 		.or(z.literal('')),
 	type: z.enum(RESOURCE_TYPE_VALUES).default(ResourceType.WHITEPAPER),

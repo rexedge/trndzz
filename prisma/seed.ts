@@ -6,6 +6,8 @@ import {
 	ArticleType,
 	BusinessRole,
 	ClaimStatus,
+	NotificationStatus,
+	NotificationType,
 	PrismaClient,
 	ResourceType,
 	RfqMatchStatus,
@@ -20,6 +22,10 @@ import {
 
 const pool = new Pool({
 	connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
+	max: 1,
+	idleTimeoutMillis: 30_000,
+	connectionTimeoutMillis: 25_000,
+	keepAlive: true,
 });
 const prisma = new PrismaClient({
 	adapter: new PrismaPg(pool),
@@ -748,7 +754,7 @@ async function main() {
 		},
 		update: {
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/warm-aa3003-055mm-stucco-coil-tds.pdf',
+				'/api/documents/datasheet/aa3003-055mm-stucco-prepainted-coil',
 		},
 		create: {
 			companyId: warmCompany.id,
@@ -770,7 +776,7 @@ async function main() {
 			indicativeMax: '5080000.0000',
 			currency: 'NGN',
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/warm-aa3003-055mm-stucco-coil-tds.pdf',
+				'/api/documents/datasheet/aa3003-055mm-stucco-prepainted-coil',
 		},
 	});
 
@@ -781,7 +787,10 @@ async function main() {
 				slug: 'aa6063-t6-anodized-solar-mounting-rail-4200mm',
 			},
 		},
-		update: {},
+		update: {
+			datasheetUrl:
+				'/api/documents/datasheet/aa6063-t6-anodized-solar-mounting-rail-4200mm',
+		},
 		create: {
 			companyId: lagosExtrusions.id,
 			verticalId: aluminiumVertical.id,
@@ -801,7 +810,7 @@ async function main() {
 			indicativeMax: '5720000.0000',
 			currency: 'NGN',
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/lae-aa6063-t6-solar-rail-tds.pdf',
+				'/api/documents/datasheet/aa6063-t6-anodized-solar-mounting-rail-4200mm',
 		},
 	});
 
@@ -1411,7 +1420,10 @@ async function main() {
 				slug: 'bs4449-b500b-16mm-tempcore-tmt-rebar-12m',
 			},
 		},
-		update: {},
+		update: {
+			datasheetUrl:
+				'/api/documents/datasheet/bs4449-b500b-16mm-tempcore-tmt-rebar-12m',
+		},
 		create: {
 			companyId: nigerDeltaSteel.id,
 			verticalId: steelVertical.id,
@@ -1430,7 +1442,7 @@ async function main() {
 			indicativeMax: '1365000.0000',
 			currency: 'NGN',
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/ndsm-b500b-16mm-tmt-mtc.pdf',
+				'/api/documents/datasheet/bs4449-b500b-16mm-tempcore-tmt-rebar-12m',
 		},
 	});
 
@@ -1917,7 +1929,10 @@ async function main() {
 				slug: '580wp-ntype-topcon-bifacial-dual-glass-pallet',
 			},
 		},
-		update: {},
+		update: {
+			datasheetUrl:
+				'/api/documents/datasheet/580wp-ntype-topcon-bifacial-dual-glass-pallet',
+		},
 		create: {
 			companyId: heliosSolar.id,
 			verticalId: solarVertical.id,
@@ -1936,7 +1951,7 @@ async function main() {
 			indicativeMax: '172500.0000',
 			currency: 'NGN',
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/helioswest-580wp-topcon-bifacial-tds.pdf',
+				'/api/documents/datasheet/580wp-ntype-topcon-bifacial-dual-glass-pallet',
 		},
 	});
 
@@ -1947,7 +1962,10 @@ async function main() {
 				slug: '100kw-215kwh-liquid-cooled-lfp-ci-bess-cabinet',
 			},
 		},
-		update: {},
+		update: {
+			datasheetUrl:
+				'/api/documents/datasheet/100kw-215kwh-liquid-cooled-lfp-ci-bess-cabinet',
+		},
 		create: {
 			companyId: heliosSolar.id,
 			verticalId: solarVertical.id,
@@ -1965,7 +1983,7 @@ async function main() {
 			indicativeMax: '79000000.0000',
 			currency: 'NGN',
 			datasheetUrl:
-				'https://standards.trndzz.com/datasheets/helioswest-215kwh-lfp-bess-spec.pdf',
+				'/api/documents/datasheet/100kw-215kwh-liquid-cooled-lfp-ci-bess-cabinet',
 		},
 	});
 
@@ -2069,7 +2087,10 @@ async function main() {
 		where: {
 			slug: 'son-nis-488-aluminium-roofing-coil-specification-corrosion-guide',
 		},
-		update: {},
+		update: {
+			fileUrl:
+				'/api/documents/dossier/son-nis-488-aluminium-roofing-coil-specification-corrosion-guide',
+		},
 		create: {
 			verticalId: aluminiumVertical.id,
 			categoryId: catCoils.id,
@@ -2081,7 +2102,7 @@ async function main() {
 			contentPreview: `### Executive Summary (Ungated Preview)\n\nAcross coastal industrial zones such as Lekki, Port Harcourt, and Warri, premature chalking and pitting of commercial warehouse roofs stems from two preventable procurement errors:\n\n1. **Substituting AA1100 for Mn-alloyed AA3003-H14** on wide-span industrial trusses.\n2. **Accepting nominal gauge invoices without bare-metal micrometer verification** (where 0.48mm total coated thickness is misrepresented as 0.55mm).\n\nUnlock the complete 28-page engineering dossier below for full alloy mechanical tables, paint DFT salt-spray benchmarks, and ready-to-copy RFQ tender clauses.`,
 			fullContentMarkdown: `## 1. Alloy Selection Matrix for West African Climates\n\n| Alloy & Temper | Ultimate Tensile Strength | Yield Strength | Recommended Application |\n| :--- | :--- | :--- | :--- |\n| **AA1100-H14** | 110–145 MPa | 95 MPa | Residential flashing & light interior ceiling strips |\n| **AA3003-H14** | 140–180 MPa | 125 MPa | Industrial longspan warehouses, step-tile estates, coastal factories |\n| **AA3105-H16** | 160–205 MPa | 145 MPa | High-wind portal frames & heavy architectural standing-seam |\n\n## 2. Coating Chemistry: RMP Polyester vs. 70% Kynar PVDF\n\n- **Regular Modified Polyester (18–20 microns topcoat / 5–7 microns backer):** Standard commercial specification for inland states (Abuja FCT, Kano, Oyo, Enugu) with 10–12 year colour retention.\n- **PVDF Fluorocarbon (25+ microns):** Recommended within 5 km of Atlantic shoreline or petrochemical corridors due to superior UV and acid-mist resistance.\n\n## 3. Incoming Inspection Checklist for Procurement Managers\n\n1. Require **Mill Test Certificate (MTC)** referencing heat/coil batch numbers.\n2. Verify **Total Coated Thickness (TCT)** vs **Base Metal Thickness (BMT)** using calibrated digital micrometers across three coil edges.\n3. Perform MEK solvent rub test (minimum 100 double rubs for cured polyester/PVDF lines).\n4. Confirm valid **SON MANCAP** certificate number against the rolling mill's corporate RC registration.`,
 			fileUrl:
-				'https://standards.trndzz.com/learn/son-nis-488-aluminium-coil-handbook-2026.pdf',
+				'/api/documents/dossier/son-nis-488-aluminium-roofing-coil-specification-corrosion-guide',
 			type: ResourceType.REGULATORY_GUIDE,
 			isGated: true,
 			isFeatured: true,
@@ -2094,7 +2115,10 @@ async function main() {
 		where: {
 			slug: 'west-africa-aluminium-extrusion-coil-market-outlook-q4-2026',
 		},
-		update: {},
+		update: {
+			fileUrl:
+				'/api/documents/dossier/west-africa-aluminium-extrusion-coil-market-outlook-q4-2026',
+		},
 		create: {
 			verticalId: aluminiumVertical.id,
 			categoryId: catExtrusions.id,
@@ -2105,7 +2129,7 @@ async function main() {
 			contentPreview: `### Key Intelligence Highlights\n\n- Domestic AA6063 extrusion press utilization rose 19% YoY on surging demand from **commercial curtain-wall facades** and **rooftop PV mounting rails**.\n- Regional Naira coil spreads have stabilized within a tighter corridor as mills adopt shorter 7-day price validity windows.\n\nComplete the corporate verification gate to read full state-by-state capacity tables and 2027 price scenarios.`,
 			fullContentMarkdown: `## Regional Capacity & Utilization Breakdown\n\nInstalled extrusion and colour-coating capacity across the **Lagos–Ogun**, **Onitsha–Nnewi**, and **Kano** industrial axes now exceeds **210,000 MT/year**, though effective utilization varies sharply with gas supply reliability and primary ingot/coil working-capital financing.\n\n### Strategic Takeaways for Commercial Buyers\n\n- **Split Frame Contracts:** Lock extrusion conversion fees in Naira while indexing billet/ingot raw material components transparently to LME 3-Month averages.\n- **Local Die Tooling:** Lead times for custom architectural mullions and PV clamps average 12–16 business days domestically vs. 9–11 weeks for Asian FCL shipments.`,
 			fileUrl:
-				'https://standards.trndzz.com/learn/west-africa-aluminium-outlook-2026.pdf',
+				'/api/documents/dossier/west-africa-aluminium-extrusion-coil-market-outlook-q4-2026',
 			type: ResourceType.SECTOR_REPORT,
 			isGated: true,
 			isFeatured: false,
@@ -2118,7 +2142,10 @@ async function main() {
 		where: {
 			slug: 'bs4449-grade-b500b-tmt-rebar-quality-audit-playbook',
 		},
-		update: {},
+		update: {
+			fileUrl:
+				'/api/documents/dossier/bs4449-grade-b500b-tmt-rebar-quality-audit-playbook',
+		},
 		create: {
 			verticalId: steelVertical.id,
 			categoryId: catRebar.id,
@@ -2130,7 +2157,7 @@ async function main() {
 			contentPreview: `### Why Mass-Per-Meter Beats Visual Caliper Checks\n\nRib geometry manipulation can make an undersized 14.7mm bar read close to 16mm across ribs—yet deliver **15% less steel cross-sectional area** in critical columns and transfer beams.\n\nUnlock the full whitepaper for exact BS4449 / NIS 117 weight-per-12m-bar acceptance tables and mandatory RFQ clauses.`,
 			fullContentMarkdown: `## Nominal Mass-Per-Meter Reference Table (BS4449 / NIS 117)\n\n| Nominal Diameter | Standard Mass (kg/m) | Full 12m Bar Weight (kg) | Bars per Metric Ton (Approx.) |\n| :--- | :--- | :--- | :--- |\n| **12 mm** | 0.888 kg/m | 10.66 kg | ~94 bars |\n| **16 mm** | 1.578 kg/m | 18.94 kg | ~53 bars |\n| **20 mm** | 2.466 kg/m | 29.59 kg | ~34 bars |\n| **25 mm** | 3.853 kg/m | 46.24 kg | ~21.6 bars |\n\n## Mandatory Spectrometer & Tensile Clauses\n\n1. **Yield Strength (ReH):** Minimum 500 MPa.\n2. **Tensile/Yield Ratio (Rm/ReH):** Minimum 1.08 (B500B ductility class).\n3. **Carbon Equivalent Value (CEV):** Maximum 0.50% for safe site lap/butt welding.`,
 			fileUrl:
-				'https://standards.trndzz.com/learn/bs4449-b500b-tmt-audit-playbook.pdf',
+				'/api/documents/dossier/bs4449-grade-b500b-tmt-rebar-quality-audit-playbook',
 			type: ResourceType.WHITEPAPER,
 			isGated: true,
 			isFeatured: true,
@@ -2143,7 +2170,10 @@ async function main() {
 		where: {
 			slug: 'ci-factory-diesel-to-solar-bess-lcoe-capex-benchmark-2026',
 		},
-		update: {},
+		update: {
+			fileUrl:
+				'/api/documents/dossier/ci-factory-diesel-to-solar-bess-lcoe-capex-benchmark-2026',
+		},
 		create: {
 			verticalId: solarVertical.id,
 			categoryId: catInvertersBess.id,
@@ -2155,7 +2185,7 @@ async function main() {
 			contentPreview: `### Executive Benchmark\n\nAt landed AGO diesel prices above ₦1,250/litre, self-generated diesel power costs industrial facilities **₦385–₦460/kWh**, compared with a 10-year levelized solar PV + BESS cost of **₦145–₦190/kWh**.\n\nUnlock the complete dossier for EPC BoQ cost breakdowns, inverter sizing ratios, and warranty bankability criteria.`,
 			fullContentMarkdown: `## Capex Breakdown for a 1.0 MWp + 430 kWh C&I Hybrid System\n\n- **Tier-1 N-Type TOPCon 580Wp Modules:** ~29% of turnkey capex\n- **Liquid-Cooled LFP BESS + Hybrid PCS:** ~36% of turnkey capex\n- **AA6063-T6 Aluminium Roof Racking & Clamps:** ~9% of turnkey capex\n- **MV/LV Switchgear,PV/Genset Sync Controller & Cabling:** ~15% of turnkey capex\n- **Civil, Engineering, NEMSA Testing & Commissioning:** ~11% of turnkey capex\n\n## Procurement Bankability Rules\n\n1. Require container-level OEM serial lists verifiable directly with the module manufacturer.\n2. Specify liquid-cooled IP55 outdoor LFP cabinets over air-cooled indoor racks where ambient factory temperatures exceed 34°C.`,
 			fileUrl:
-				'https://standards.trndzz.com/learn/ci-solar-bess-lcoe-benchmark-2026.pdf',
+				'/api/documents/dossier/ci-factory-diesel-to-solar-bess-lcoe-capex-benchmark-2026',
 			type: ResourceType.SECTOR_REPORT,
 			isGated: true,
 			isFeatured: true,
@@ -2183,6 +2213,53 @@ async function main() {
 				estimatedBudgetBand: '₦100M – ₦500M',
 				deliveryState: 'Lagos',
 			},
+		});
+	}
+
+	// Sample DRY_RUN_LOGGED NotificationDispatch entries for /admin/notifications
+	const existingDispatches = await prisma.notificationDispatch.count();
+	if (existingDispatches === 0) {
+		await prisma.notificationDispatch.createMany({
+			data: [
+				{
+					type: NotificationType.RFQ_BUYER_RECEIPT,
+					status: NotificationStatus.DRY_RUN_LOGGED,
+					recipientEmail: 'procurement@ekodevelopments.ng',
+					subject:
+						'[RFQ-ALU-2026-00018] Aluminium RFQ Broadcast Active (2 Matched Suppliers)',
+					bodyPreview:
+						'Your structured tender "25 MT of 0.55mm AA3003 Stucco-Embossed Coils (Bush Green & Ivory)" is now live and matched with 2 pre-qualified Aluminium suppliers.',
+					actionUrl: 'http://localhost:3000/dashboard/rfqs',
+					rfqId: rfq1.id,
+				},
+				{
+					type: NotificationType.RFQ_VERIFIED_VENDOR_INVITE,
+					status: NotificationStatus.DRY_RUN_LOGGED,
+					recipientEmail: 'commercial@warm-aluminium.ng',
+					recipientPhone: '+2348091112200',
+					subject:
+						'New Aluminium Tender [RFQ-ALU-2026-00018]: 25 MT (Lagos)',
+					bodyPreview:
+						'Buyer Eko Commercial Developments Ltd broadcasted a structured RFQ matching West African Rolling Mills Plc (25 MT AA3003 0.55mm Stucco Coils).',
+					actionUrl:
+						'http://aluminium.localhost:3000/rfq/RFQ-ALU-2026-00018',
+					companyId: warmCompany.id,
+					rfqId: rfq1.id,
+				},
+				{
+					type: NotificationType.RFQ_UNCLAIMED_CLAIM_TEASER,
+					status: NotificationStatus.DRY_RUN_LOGGED,
+					recipientEmail: 'info@atlanticcoils-ng.example',
+					subject:
+						'Buyer RFQ Waiting for Atlantic Coils & Metals Impex Ltd: 25 MT Aluminium Coils & Flat Rolled Sheets (Lagos)',
+					bodyPreview:
+						'A commercial buyer in Lagos just broadcasted RFQ-ALU-2026-00018 for 25 MT matching your directory listing. Claim and CAC-verify your profile to unlock buyer details and quote.',
+					actionUrl:
+						'http://aluminium.localhost:3000/directory/atlantic-coils-metals-lagos/claim',
+					companyId: atlanticCoilsUnclaimed.id,
+					rfqId: rfq1.id,
+				},
+			],
 		});
 	}
 

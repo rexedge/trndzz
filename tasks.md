@@ -61,6 +61,14 @@
 
 ---
 
+## Horizon 1 — Phase 3: Go-Live Readiness & Growth Automation
+- [x] Build Transactional Trade & *"Claim & Convert"* Notification Engine (`NotificationDispatch` Prisma outbox, Resend + WhatsApp webhook support, automatic local `DRY_RUN_LOGGED` pre-launch mode, and `/admin/notifications` monitor)
+- [x] Build Admin Bulk CSV Supplier Directory Importer (`/admin/directory` RFC-4180 CSV parser, pipe-delimited multi-category/state mapping, downloadable sample CSV template, and idempotent upserts up to 250 rows)
+- [x] Instrument Cross-Subdomain PostHog B2B Conversion Funnel Events (`trackB2BEvent` across Contextual RFQ Drawer, Multi-Item RFQ Basket, RFQ Broadcast, Company Claim, Supplier Quote, and Learn Dossier Gate)
+- [x] Add Pre-Launch Local & Staging Safety (`buildVerticalUrl` staging path fallback, printable local `/api/documents/[kind]/[slug]` TDS/dossier endpoint, `/api/health` probe, `.env.example`, and `docs/DEPLOYMENT.md` runbook)
+
+---
+
 ## Horizon 2 & 3 — Scale, Monetization & Transactional Trade (Future)
 - [ ] Automated Vendor SaaS billing (`VERIFIED_PRO` & `ENTERPRISE_SPONSOR` tiers via Paystack/Flutterwave) + vendor lead/impression analytics
 - [ ] Assisted Trade concierge desk & analyst-verified high-value RFQ workflows

@@ -105,7 +105,10 @@ export const createCompanyProductSchema = z.object({
 	datasheetUrl: z
 		.string()
 		.trim()
-		.url('Enter a valid datasheet URL')
+		.refine(
+			(v) => !v || v.startsWith('/') || /^https?:\/\//i.test(v),
+			'Enter a valid datasheet URL or /api/documents/... path'
+		)
 		.optional()
 		.or(z.literal('')),
 	specifications: z.record(z.string(), z.string()).default({}),
