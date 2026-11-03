@@ -6,6 +6,7 @@ import { FileSpreadsheet, Sparkles } from 'lucide-react';
 import { RfqVisibility } from '@prisma/client';
 import { toast } from 'sonner';
 import { createRfqAction } from '@/app/actions/rfq.actions';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import { useRfqDraftStore } from '@/store/useRfqDraftStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,14 +166,33 @@ export function ContextualRfqDrawer({
 			toast.success(res.message);
 			setOpen(false);
 			if (res.data?.referenceNumber) {
+				trackB2BEvent('rfq_broadcast_submitted', {
+					verticalSlug,
+					categoryId,
+					referenceNumber: res.data.referenceNumber,
+					fromArticle: Boolean(sourceArticleId),
+					fromTargetCompany: Boolean(targetCompanyId),
+				});
 				router.push(`/rfq/${res.data.referenceNumber}`);
 				router.refresh();
 			}
 		});
 	};
 
+	const handleOpenChange = (nextOpen: boolean) => {
+		setOpen(nextOpen);
+		if (nextOpen) {
+			trackB2BEvent('pulse_contextual_rfq_opened', {
+				verticalSlug,
+				categoryId,
+				sourceArticleId: sourceArticleId ?? null,
+				targetCompanyId: targetCompanyId ?? null,
+			});
+		}
+	};
+
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
+		<Sheet open={open} onOpenChange={handleOpenChange}>
 			<SheetTrigger asChild>
 				<Button
 					size='sm'

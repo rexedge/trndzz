@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { submitRfqQuoteAction } from '@/app/actions/rfq.actions';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import { formatCurrency } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,11 @@ export function SupplierQuoteForm({
 				return;
 			}
 
+			trackB2BEvent('supplier_quote_submitted', {
+				rfqId,
+				companyId,
+				currency: 'NGN',
+			});
 			toast.success(res.message);
 			window.location.href = quotesDashboardUrl;
 			router.refresh();

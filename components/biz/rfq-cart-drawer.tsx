@@ -14,6 +14,7 @@ import {
 	SheetTrigger,
 } from '@/components/ui/sheet';
 import { formatCurrency, formatNumber } from '@/lib/utils/format';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import {
 	type RfqCartItem,
 	useRfqCartStore,
@@ -37,6 +38,12 @@ export function AddToRfqCartButton({
 			className='h-8 gap-1 text-xs'
 			onClick={() => {
 				addItem(item);
+				trackB2BEvent('rfq_basket_item_added', {
+					verticalSlug: item.verticalSlug,
+					productId: item.productId,
+					categorySlug: item.categorySlug,
+					quantity: item.quantity,
+				});
 				toast.success(`Added "${item.productName}" to RFQ Basket`);
 			}}
 		>

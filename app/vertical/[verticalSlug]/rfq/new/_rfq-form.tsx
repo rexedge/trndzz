@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BusinessRole, RfqVisibility } from '@prisma/client';
 import { toast } from 'sonner';
 import { createRfqAction } from '@/app/actions/rfq.actions';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import { BUSINESS_ROLE_VALUES } from '@/lib/validators/company.validator';
 import { useRfqDraftStore } from '@/store/useRfqDraftStore';
 import { Button } from '@/components/ui/button';
@@ -152,9 +153,17 @@ export function RfqBroadcastForm({
 				return;
 			}
 
+			const hadArticle = Boolean(draft.sourceArticleId);
+			const hadTarget = Boolean(draft.targetCompanyId);
 			resetDraft();
 			toast.success(res.message);
 			if (res.data?.referenceNumber) {
+				trackB2BEvent('rfq_broadcast_submitted', {
+					categoryId,
+					referenceNumber: res.data.referenceNumber,
+					fromArticle: hadArticle,
+					fromTargetCompany: hadTarget,
+				});
 				router.push(`/rfq/${res.data.referenceNumber}`);
 				router.refresh();
 			}

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { submitCompanyClaimAction } from '@/app/actions/claim.actions';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +54,10 @@ export function ClaimCompanyForm({
 				return;
 			}
 
+			trackB2BEvent('company_claim_submitted', {
+				companyId,
+				companyName,
+			});
 			toast.success(res.message);
 			window.location.href = claimsDashboardUrl;
 			router.refresh();

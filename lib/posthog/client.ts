@@ -1,22 +1,28 @@
 import posthog from 'posthog-js';
 
-export function initPostHog() {
-	if (typeof window !== 'undefined') {
-		const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-		const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+let isInitialized = false;
 
-		if (key && host) {
+export function initPostHog() {
+	if (typeof window !== 'undefined' && !isInitialized) {
+		const key = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+		const host =
+			process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() ||
+			'https://us.i.posthog.com';
+
+		if (key) {
 			posthog.init(key, {
 				api_host: host,
 				person_profiles: 'identified_only',
-				capture_pageview: false, // We'll manually capture pageviews
+				cross_subdomain_cookie: true,
+				capture_pageview: false,
 				capture_pageleave: true,
-				loaded: (posthog) => {
-					if (process.env.NODE_ENV === 'development') {
-						posthog.debug();
+				loaded: (ph) => {
+					if (process.env.NEXT_PUBLIC_POSTHOG_DEBUG === 'true') {
+						ph.debug();
 					}
 				},
 			});
+			isInitialized = true;
 		}
 	}
 

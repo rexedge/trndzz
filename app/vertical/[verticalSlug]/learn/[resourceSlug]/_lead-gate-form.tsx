@@ -10,6 +10,7 @@ import { Markdown } from '@/components/markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { trackB2BEvent } from '@/lib/posthog/events';
 import { BUSINESS_ROLE_VALUES } from '@/lib/validators/company.validator';
 
 interface LeadGateFormProps {
@@ -80,6 +81,11 @@ export function ResourceLeadGateForm({
 				return;
 			}
 
+			trackB2BEvent('learn_dossier_unlocked', {
+				resourceId,
+				procurementTimeline,
+				estimatedBudgetBand,
+			});
 			toast.success(res.message);
 			setUnlockedPayload(res.data);
 			router.refresh();
