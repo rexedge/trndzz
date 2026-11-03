@@ -8,6 +8,11 @@ import {
 	VerificationTier,
 } from '@prisma/client';
 import { prisma } from '@/lib/prisma/client';
+import {
+	dispatchQuoteAwardedAlert,
+	dispatchQuoteSubmittedAlert,
+	dispatchRfqBroadcastAlerts,
+} from '@/lib/services/notification.service';
 import { refreshPlatformStatsCache } from '@/lib/services/stats.service';
 import {
 	validateDynamicSpecs,
@@ -164,11 +169,11 @@ export async function createAndBroadcastRfq(
 	const [vertical, category, definitions] = await Promise.all([
 		prisma.vertical.findUnique({
 			where: { id: input.verticalId },
-			select: { id: true, slug: true },
+			select: { id: true, slug: true, name: true },
 		}),
 		prisma.category.findFirst({
 			where: { id: input.categoryId, verticalId: input.verticalId },
-			select: { id: true, valueChainStageId: true },
+			select: { id: true, name: true, valueChainStageId: true },
 		}),
 		prisma.specAttributeDefinition.findMany({
 			where: {
@@ -320,6 +325,9 @@ export async function createAndBroadcastRfq(
 				data: scoredMatches.map((m) => {
 					const isClaimed =
 						m.company.claimStatus === ClaimStatus.CLAIMED;
+					const canNotifyUnclaimed =
+						m.company.claimStatus === ClaimStatus.UNCLAIMED &&
+						Boolean(m.company.publicEmail);
 					return {
 						rfqId: rfq.id,
 						companyId: m.company.id,
@@ -330,7 +338,8 @@ export async function createAndBroadcastRfq(
 						matchReason: isClaimed
 							? m.reason
 							: `${m.reason} (Claim teaser queued)`,
-						notifiedAt: isClaimed ? new Date() : null,
+						notifiedAt:
+							isClaimed || canNotifyUnclaimed ? new Date() : null,
 					};
 				}),
 				skipDuplicates: true,
@@ -341,6 +350,30 @@ export async function createAndBroadcastRfq(
 	});
 
 	await refreshPlatformStatsCache().catch(() => null);
+
+	await dispatchRfqBroadcastAlerts({
+		rfqId: created.id,
+		referenceNumber: created.referenceNumber,
+		title: created.title,
+		verticalSlug: vertical.slug,
+		verticalName: vertical.name,
+		categoryName: category.name,
+		quantity: input.quantity,
+		unit: input.unit,
+		deliveryState: input.deliveryState,
+		specifications: specValidation.cleaned,
+		buyerCompanyName: input.buyerCompanyName,
+		buyerContactEmail: input.buyerContactEmail,
+		matchedVendors: scoredMatches.map((m) => ({
+			companyId: m.company.id,
+			companyName: m.company.name,
+			companySlug: m.company.slug,
+			claimStatus: m.company.claimStatus,
+			publicEmail: m.company.publicEmail,
+			whatsappNumber: m.company.whatsappNumber,
+			publicPhone: m.company.publicPhone,
+		})),
+	}).catch(() => null);
 
 	return {
 		ok: true as const,
@@ -353,17 +386,27 @@ export async function submitSupplierRfqQuote(
 	submittedById: string,
 	input: SubmitRfqQuoteInput
 ) {
-	return prisma.$transaction(async (tx) => {
-		const rfq = await tx.rfq.findUnique({
-			where: { id: input.rfqId },
-			select: {
-				id: true,
-				quantity: true,
-				status: true,
-				visibility: true,
-				buyerId: true,
-			},
-		});
+	const txResult = await prisma.$transaction(async (tx) => {
+		const [rfq, supplier] = await Promise.all([
+			tx.rfq.findUnique({
+				where: { id: input.rfqId },
+				select: {
+					id: true,
+					referenceNumber: true,
+					title: true,
+					quantity: true,
+					unit: true,
+					status: true,
+					visibility: true,
+					buyerId: true,
+					buyerContactEmail: true,
+				},
+			}),
+			tx.company.findUnique({
+				where: { id: input.companyId },
+				select: { id: true, name: true },
+			}),
+		]);
 
 		if (!rfq) {
 			throw new Error('RFQ not found.');
@@ -445,8 +488,24 @@ export async function submitSupplierRfqQuote(
 			});
 		}
 
-		return quote;
+		return { quote, rfq, supplierName: supplier?.name ?? 'Verified Supplier', totalPrice };
 	});
+
+	await dispatchQuoteSubmittedAlert({
+		rfqId: txResult.rfq.id,
+		referenceNumber: txResult.rfq.referenceNumber,
+		rfqTitle: txResult.rfq.title,
+		buyerContactEmail: txResult.rfq.buyerContactEmail,
+		supplierName: txResult.supplierName,
+		supplierId: input.companyId,
+		unitPrice: input.unitPrice,
+		totalPrice: txResult.totalPrice,
+		currency: input.currency.toUpperCase(),
+		unit: txResult.rfq.unit,
+		leadTimeDays: input.leadTimeDays,
+	}).catch(() => null);
+
+	return txResult.quote;
 }
 
 export async function decideBuyerQuoteStatus(
@@ -456,7 +515,11 @@ export async function decideBuyerQuoteStatus(
 	const result = await prisma.$transaction(async (tx) => {
 		const quote = await tx.rfqQuote.findUnique({
 			where: { id: input.quoteId },
-			include: { rfq: true },
+			include: {
+				rfq: true,
+				company: { select: { id: true, name: true, publicEmail: true } },
+				submittedBy: { select: { email: true } },
+			},
 		});
 
 		if (!quote) {
@@ -496,10 +559,30 @@ export async function decideBuyerQuoteStatus(
 			});
 		}
 
-		return updated;
+		return { updated, quote };
 	});
 
 	await refreshPlatformStatsCache().catch(() => null);
-	return result;
+
+	if (input.decision === RfqQuoteStatus.ACCEPTED) {
+		const recipientEmail =
+			result.quote.company.publicEmail || result.quote.submittedBy.email;
+		await dispatchQuoteAwardedAlert({
+			rfqId: result.quote.rfqId,
+			referenceNumber: result.quote.rfq.referenceNumber,
+			rfqTitle: result.quote.rfq.title,
+			buyerCompanyName: result.quote.rfq.buyerCompanyName,
+			buyerContactName: result.quote.rfq.buyerContactName,
+			buyerContactEmail: result.quote.rfq.buyerContactEmail,
+			buyerContactPhone: result.quote.rfq.buyerContactPhone,
+			supplierId: result.quote.company.id,
+			supplierName: result.quote.company.name,
+			supplierEmail: recipientEmail,
+			totalPrice: Number(result.quote.totalPrice),
+			currency: result.quote.currency,
+		}).catch(() => null);
+	}
+
+	return result.updated;
 }
 

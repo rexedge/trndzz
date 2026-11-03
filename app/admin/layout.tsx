@@ -15,6 +15,7 @@ const ADMIN_LINKS = [
 	{ href: '/admin/claims', label: 'Claim Queue' },
 	{ href: '/admin/rfqs', label: 'RFQ Monitor' },
 	{ href: '/admin/learn', label: 'Learn & Leads' },
+	{ href: '/admin/notifications', label: 'Alert Outbox' },
 ];
 
 export default async function AdminLayout({

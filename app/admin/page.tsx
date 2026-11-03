@@ -5,6 +5,7 @@ import {
 	RfqStatus,
 } from '@prisma/client';
 import {
+	BellRing,
 	BookOpen,
 	Building2,
 	FileSpreadsheet,
@@ -30,6 +31,7 @@ export default async function AdminCommandCenterPage() {
 		openRfqCount,
 		learnResourceCount,
 		resourceLeadCount,
+		notificationCount,
 	] = await Promise.all([
 		prisma.vertical.count(),
 		prisma.article.count(),
@@ -46,6 +48,9 @@ export default async function AdminCommandCenterPage() {
 		}),
 		prisma.knowledgeResource ? prisma.knowledgeResource.count() : Promise.resolve(0),
 		prisma.resourceLead ? prisma.resourceLead.count() : Promise.resolve(0),
+		prisma.notificationDispatch
+			? prisma.notificationDispatch.count()
+			: Promise.resolve(0),
 	]);
 
 	const modules = [
@@ -97,6 +102,13 @@ export default async function AdminCommandCenterPage() {
 			value: learnResourceCount,
 			sub: `${formatNumber(resourceLeadCount)} gated whitepaper buyer leads captured`,
 			icon: BookOpen,
+		},
+		{
+			href: '/admin/notifications',
+			label: 'Transactional Alert Outbox',
+			value: notificationCount,
+			sub: 'Audit RFQ broadcasts, quote notices & Claim-Teaser conversions (Dry-Run ready)',
+			icon: BellRing,
 		},
 	];
 

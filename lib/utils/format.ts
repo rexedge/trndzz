@@ -59,3 +59,16 @@ export function formatPercentDelta(value: number | string | null | undefined): {
 	};
 }
 
+/**
+ * Formats timestamps consistently for audit tables and trade desks.
+ */
+export function formatDate(value: Date | string): string {
+	const d = value instanceof Date ? value : new Date(value);
+	if (Number.isNaN(d.getTime())) return '—';
+	return new Intl.DateTimeFormat('en-NG', {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+	}).format(d);
+}
+
+

@@ -7,6 +7,7 @@ import {
 	VerificationTier,
 } from '@prisma/client';
 import { prisma } from '@/lib/prisma/client';
+import { dispatchClaimReviewDecisionAlert } from '@/lib/services/notification.service';
 import { refreshPlatformStatsCache } from '@/lib/services/stats.service';
 import type {
 	ReviewCompanyClaimInput,
@@ -128,7 +129,7 @@ export async function reviewCompanyClaimRequest(
 			});
 
 			// Unlock any pre-existing matched RFQs ("Claim & Convert" conversion payoff!)
-			await tx.rfqVendorMatch.updateMany({
+			const unlockedMatches = await tx.rfqVendorMatch.updateMany({
 				where: {
 					companyId: claim.companyId,
 					status: RfqMatchStatus.MATCHED,
@@ -138,6 +139,12 @@ export async function reviewCompanyClaimRequest(
 					notifiedAt: new Date(),
 				},
 			});
+
+			return {
+				updatedClaim,
+				claim,
+				unlockedRfqCount: unlockedMatches.count,
+			};
 		} else {
 			// Check if any other pending claim exists; otherwise revert to UNCLAIMED
 			const otherPending = await tx.companyClaimRequest.count({
@@ -156,13 +163,25 @@ export async function reviewCompanyClaimRequest(
 					data: { claimStatus: ClaimStatus.UNCLAIMED },
 				});
 			}
-		}
 
-		return updatedClaim;
+			return { updatedClaim, claim, unlockedRfqCount: 0 };
+		}
 	});
 
 	await refreshPlatformStatsCache().catch(() => null);
-	return result;
+
+	await dispatchClaimReviewDecisionAlert({
+		companyId: result.claim.companyId,
+		companyName: result.claim.company.name,
+		workEmail: result.claim.workEmail,
+		phone: result.claim.phone,
+		decision: input.decision,
+		verificationTier: input.verificationTier,
+		reviewNote: input.reviewNote,
+		unlockedRfqCount: result.unlockedRfqCount,
+	}).catch(() => null);
+
+	return result.updatedClaim;
 }
 
 export async function listAdminClaimRequests() {

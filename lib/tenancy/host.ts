@@ -93,7 +93,11 @@ export function isSharedPlatformPath(pathname: string): boolean {
 }
 
 /**
- * Builds an absolute URL to a specific vertical subdomain (aluminium.trndzz.com or aluminium.localhost:3000).
+ * Builds an absolute URL to a specific vertical portal:
+ * - Local dev (`localhost:3000`) -> `http://aluminium.localhost:3000/...`
+ * - Custom wildcard domain (`trndzz.com`) -> `https://aluminium.trndzz.com/...`
+ * - Pre-DNS staging hosts (`*.vercel.app`, `*.up.railway.app`, `127.0.0.1`) -> path-based `/vertical/aluminium/...`
+ *   so staging previews work out-of-the-box before wildcard DNS is live!
  */
 export function buildVerticalUrl(
 	verticalSlug: string,
@@ -107,6 +111,19 @@ export function buildVerticalUrl(
 	try {
 		const base = new URL(appUrl);
 		const hostNoWww = base.hostname.replace(/^www\./, '');
+
+		const isWildcardCapable =
+			hostNoWww === 'localhost' ||
+			(!hostNoWww.endsWith('.vercel.app') &&
+				!hostNoWww.endsWith('.up.railway.app') &&
+				!hostNoWww.endsWith('.onrender.com') &&
+				!/^\d+\.\d+\.\d+\.\d+$/.test(hostNoWww));
+
+		if (!isWildcardCapable) {
+			const fallbackPath = `/vertical/${verticalSlug}${normalizedPath === '/' ? '' : normalizedPath}`;
+			return new URL(fallbackPath, base).toString();
+		}
+
 		base.hostname = `${verticalSlug}.${hostNoWww}`;
 		base.pathname = '/';
 		base.search = '';
