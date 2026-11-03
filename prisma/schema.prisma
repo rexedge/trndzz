@@ -127,6 +127,22 @@ enum ResourceType {
   WEBINAR
 }
 
+enum NotificationType {
+  RFQ_BUYER_RECEIPT
+  RFQ_VERIFIED_VENDOR_INVITE
+  RFQ_UNCLAIMED_CLAIM_TEASER
+  RFQ_QUOTE_RECEIVED
+  RFQ_QUOTE_AWARDED
+  COMPANY_CLAIM_APPROVED
+  COMPANY_CLAIM_REJECTED
+}
+
+enum NotificationStatus {
+  SENT
+  DRY_RUN_LOGGED
+  FAILED
+}
+
 // ============================================================================
 // Identity & Authentication (Better Auth Compatible)
 // ============================================================================
@@ -448,6 +464,7 @@ model Company {
   rfqQuotes       RfqQuote[]
   directRfqs      Rfq[]                  @relation("DirectCompanyRfqs")
   sponsoredResources KnowledgeResource[] @relation("SponsoredResources")
+  notifications      NotificationDispatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -619,6 +636,7 @@ model Rfq {
 
   matches RfqVendorMatch[]
   quotes  RfqQuote[]
+  notifications NotificationDispatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -756,6 +774,33 @@ model ArticleCompanyMention {
 
   @@unique([articleId, companyId])
   @@index([companyId])
+}
+
+// ============================================================================
+// Transactional Trade Alerts & Claim-Convert Outbox
+// ============================================================================
+
+model NotificationDispatch {
+  id                String             @id @default(cuid())
+  type              NotificationType
+  status            NotificationStatus @default(DRY_RUN_LOGGED)
+  recipientEmail    String
+  recipientPhone    String?
+  subject           String
+  bodyPreview       String             @db.Text
+  actionUrl         String
+  companyId         String?
+  company           Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  rfqId             String?
+  rfq               Rfq?               @relation(fields: [rfqId], references: [id], onDelete: SetNull)
+  providerMessageId String?
+  errorMessage      String?            @db.Text
+
+  createdAt         DateTime           @default(now())
+
+  @@index([type, status, createdAt])
+  @@index([companyId, createdAt])
+  @@index([rfqId, createdAt])
 }
 
 // ============================================================================
