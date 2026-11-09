@@ -85,7 +85,7 @@ async function deliverNotificationViaProviders(payload: {
 	const resendKey = process.env.RESEND_API_KEY?.trim();
 	const fromAddress =
 		process.env.EMAIL_FROM?.trim() ||
-		'Trndzz Trade Desk <onboarding@resend.dev>';
+		'Trndzz Trade Desk <alerts@trndzz.com>';
 	const whatsappWebhook = process.env.WHATSAPP_ALERT_WEBHOOK_URL?.trim();
 
 	let status: NotificationStatus = NotificationStatus.DRY_RUN_LOGGED;
