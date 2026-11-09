@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
-const SCHEMA_CLIENT_REVISION = 'phase3-golive-outbox-v1';
+const SCHEMA_CLIENT_REVISION = 'phase4-hardening-v1';
 
 const globalForPrisma = globalThis as unknown as {
 	pgPool: Pool | undefined;
@@ -42,7 +42,9 @@ function resolvePrismaSingleton(): PrismaClient {
 		globalForPrisma.prismaRevision === SCHEMA_CLIENT_REVISION &&
 		'knowledgeResource' in cached &&
 		'resourceLead' in cached &&
-		'notificationDispatch' in cached;
+		'notificationDispatch' in cached &&
+		'rfqSequence' in cached &&
+		'rateLimitBucket' in cached;
 
 	if (hasCurrentModels) {
 		return cached;

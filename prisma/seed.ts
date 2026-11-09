@@ -2263,7 +2263,30 @@ async function main() {
 		});
 	}
 
-	// 9. Update PlatformStats Singleton
+	// 9. Seed RfqSequence above highest seeded reference numbers so new RFQs never collide
+	const seedYear = 2026;
+	for (const seqInit of [
+		{ verticalId: aluminiumVertical.id, lastValue: 19 },
+		{ verticalId: steelVertical.id, lastValue: 7 },
+		{ verticalId: solarVertical.id, lastValue: 11 },
+	]) {
+		await prisma.rfqSequence.upsert({
+			where: {
+				verticalId_year: {
+					verticalId: seqInit.verticalId,
+					year: seedYear,
+				},
+			},
+			update: {},
+			create: {
+				verticalId: seqInit.verticalId,
+				year: seedYear,
+				lastValue: seqInit.lastValue,
+			},
+		});
+	}
+
+	// 10. Update PlatformStats Singleton
 	const [activeVerticals, indexedCompanies, verifiedSuppliers, openRfqsCount] =
 		await Promise.all([
 			prisma.vertical.count({ where: { status: VerticalStatus.ACTIVE } }),

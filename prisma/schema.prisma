@@ -695,6 +695,16 @@ model RfqQuote {
   @@index([companyId, createdAt])
 }
 
+// Atomic per-vertical, per-year counter for collision-safe RFQ reference numbers
+model RfqSequence {
+  verticalId String
+  year       Int
+  lastValue  Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@id([verticalId, year])
+}
+
 // ============================================================================
 // Pillar 4: Trndzz Learn (Knowledge Hub & Gated Lead Capture)
 // ============================================================================
@@ -788,6 +798,8 @@ model NotificationDispatch {
   recipientPhone    String?
   subject           String
   bodyPreview       String             @db.Text
+  textBody          String?            @db.Text
+  htmlBody          String?            @db.Text
   actionUrl         String
   companyId         String?
   company           Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -795,12 +807,29 @@ model NotificationDispatch {
   rfq               Rfq?               @relation(fields: [rfqId], references: [id], onDelete: SetNull)
   providerMessageId String?
   errorMessage      String?            @db.Text
+  attemptCount      Int                @default(1)
+  lastAttemptAt     DateTime           @default(now())
 
   createdAt         DateTime           @default(now())
 
   @@index([type, status, createdAt])
   @@index([companyId, createdAt])
   @@index([rfqId, createdAt])
+}
+
+// ============================================================================
+// Serverless Abuse Protection & Rate Limiting
+// ============================================================================
+
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+  expiresAt   DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 // ============================================================================

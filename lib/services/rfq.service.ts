@@ -1,6 +1,7 @@
 import 'server-only';
 import {
 	ClaimStatus,
+	type Prisma,
 	RfqMatchStatus,
 	RfqQuoteStatus,
 	RfqStatus,
@@ -15,11 +16,56 @@ import {
 } from '@/lib/services/notification.service';
 import { refreshPlatformStatsCache } from '@/lib/services/stats.service';
 import {
+	formatRfqReference,
+	parseRfqSequence,
+	rfqPrefixFromVerticalSlug,
+} from '@/lib/utils/rfq-reference';
+import { scoreSupplierMatch } from '@/lib/utils/rfq-matching';
+import {
 	validateDynamicSpecs,
 	type CreateRfqInput,
 	type SubmitRfqQuoteInput,
 	type UpdateQuoteStatusInput,
 } from '@/lib/validators/rfq.validator';
+
+/**
+ * Allocates the next RFQ reference number atomically inside a transaction.
+ * The floor is taken from the highest existing reference with the same
+ * prefix and year, so seeded or legacy numbers are never reused, and the
+ * single-statement upsert serialises concurrent submissions.
+ */
+async function allocateRfqReferenceNumber(
+	tx: Prisma.TransactionClient,
+	vertical: { id: string; slug: string }
+): Promise<string> {
+	const prefix = rfqPrefixFromVerticalSlug(vertical.slug);
+	const year = new Date().getFullYear();
+
+	const highestExisting = await tx.rfq.findFirst({
+		where: { referenceNumber: { startsWith: `RFQ-${prefix}-${year}-` } },
+		orderBy: { referenceNumber: 'desc' },
+		select: { referenceNumber: true },
+	});
+	const floor = highestExisting
+		? parseRfqSequence(highestExisting.referenceNumber)
+		: 0;
+
+	const rows = await tx.$queryRaw<{ lastValue: number }[]>`
+		INSERT INTO "RfqSequence" ("verticalId", "year", "lastValue", "updatedAt")
+		VALUES (${vertical.id}, ${year}, ${floor + 1}, NOW())
+		ON CONFLICT ("verticalId", "year")
+		DO UPDATE SET
+			"lastValue" = GREATEST("RfqSequence"."lastValue", ${floor}) + 1,
+			"updatedAt" = NOW()
+		RETURNING "lastValue"
+	`;
+
+	const next = Number(rows[0]?.lastValue);
+	if (!Number.isSafeInteger(next) || next < 1) {
+		throw new Error('Could not allocate an RFQ reference number.');
+	}
+	return formatRfqReference(prefix, year, next);
+}
 
 export async function getVerticalRfqFormMeta(verticalId: string) {
 	const [categories, specDefinitions] = await Promise.all([
@@ -202,14 +248,6 @@ export async function createAndBroadcastRfq(
 		};
 	}
 
-	const prefix = vertical.slug.slice(0, 3).toUpperCase();
-	const year = new Date().getFullYear();
-	const currentCount = await prisma.rfq.count({
-		where: { verticalId: vertical.id },
-	});
-	const seq = String(currentCount + 19).padStart(5, '0');
-	const referenceNumber = `RFQ-${prefix}-${year}-${seq}`;
-
 	// Find candidate suppliers in this vertical
 	const candidateCompanies = await prisma.company.findMany({
 		where: {
@@ -225,67 +263,20 @@ export async function createAndBroadcastRfq(
 	});
 
 	const scoredMatches = candidateCompanies
-		.map((company) => {
-			let score = 50;
-			const reasons: string[] = [];
-
-			const hasCategory = company.categories.some(
-				(c) => c.categoryId === category.id
-			);
-			if (hasCategory) {
-				score += 25;
-				reasons.push('Category match');
-			}
-
-			if (
-				input.preferredRoles.length === 0 ||
-				company.businessRoles.some((r) =>
-					input.preferredRoles.includes(r)
-				)
-			) {
-				score += 10;
-				reasons.push('Role match');
-			}
-
-			const servesState =
-				company.headquartersState.toLowerCase() ===
-					input.deliveryState.toLowerCase() ||
-				company.coverageStates.some(
-					(s) => s.toLowerCase() === input.deliveryState.toLowerCase()
-				);
-			if (servesState) {
-				score += 10;
-				reasons.push(`Supplies ${input.deliveryState}`);
-			}
-
-			if (
-				company.verificationTier === VerificationTier.ENTERPRISE_SPONSOR ||
-				company.verificationTier === VerificationTier.VERIFIED_PRO
-			) {
-				score += 5;
-				reasons.push('Priority Verified Tier');
-			} else if (company.verificationTier === VerificationTier.VERIFIED) {
-				score += 3;
-				reasons.push('Verified Supplier');
-			}
-
-			if (input.targetCompanyId === company.id) {
-				score = 100;
-				reasons.unshift('Direct Buyer Selection');
-			}
-
-			return {
-				company,
-				score: Math.min(score, 100),
-				reason: reasons.join(' · ') || 'Vertical supplier match',
-				hasCategory,
-			};
-		})
+		.map((company) =>
+			scoreSupplierMatch(company, {
+				categoryId: category.id,
+				deliveryState: input.deliveryState,
+				preferredRoles: input.preferredRoles,
+				targetCompanyId: input.targetCompanyId,
+			})
+		)
 		.filter((m) => m.hasCategory || m.company.id === input.targetCompanyId)
 		.sort((a, b) => b.score - a.score)
 		.slice(0, 20);
 
 	const created = await prisma.$transaction(async (tx) => {
+		const referenceNumber = await allocateRfqReferenceNumber(tx, vertical);
 		const rfq = await tx.rfq.create({
 			data: {
 				referenceNumber,
