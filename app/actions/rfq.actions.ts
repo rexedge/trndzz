@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { CompanyMemberRole, RfqVisibility } from '@prisma/client';
 import { guardActionAuth, guardCompanyAccess } from '@/lib/auth/guards';
 import { prisma } from '@/lib/prisma/client';
+import { evaluateBotSubmission } from '@/lib/security/bot-check';
+import { consumeRateLimit } from '@/lib/security/rate-limit';
 import {
 	createAndBroadcastRfq,
 	decideBuyerQuoteStatus,
@@ -39,6 +41,29 @@ export async function createRfqAction(
 				message:
 					parsed.error.issues[0]?.message ??
 					'Please review your RFQ requirements.',
+			};
+		}
+
+		const botCheck = evaluateBotSubmission({
+			honeypot: parsed.data.honeypot,
+			formRenderedAt: parsed.data.formRenderedAt,
+		});
+		if (!botCheck.ok) {
+			return {
+				success: false,
+				message: botCheck.reason ?? 'Submission blocked by spam filter.',
+			};
+		}
+
+		const rate = await consumeRateLimit({
+			key: `rfq_broadcast:user:${auth.user.userId}`,
+			limit: 5,
+			windowSeconds: 3600,
+		});
+		if (!rate.allowed) {
+			return {
+				success: false,
+				message: `Hourly RFQ broadcast limit (5/hr) reached. Please retry in ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s).`,
 			};
 		}
 
@@ -120,6 +145,18 @@ export async function submitRfqQuoteAction(
 			}
 		);
 		if (!access.ok) return access.response;
+
+		const rate = await consumeRateLimit({
+			key: `rfq_quote:user:${access.user.userId}`,
+			limit: 30,
+			windowSeconds: 3600,
+		});
+		if (!rate.allowed) {
+			return {
+				success: false,
+				message: `Hourly quote submission limit (30/hr) reached. Please retry in ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s).`,
+			};
+		}
 
 		const quote = await submitSupplierRfqQuote(
 			access.user.userId,

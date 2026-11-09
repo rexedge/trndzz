@@ -35,6 +35,8 @@ export function ClaimCompanyForm({
 	const [rcNumber, setRcNumber] = useState('');
 	const [proofDocumentUrl, setProofDocumentUrl] = useState('');
 	const [message, setMessage] = useState('');
+	const [honeypot, setHoneypot] = useState('');
+	const [formRenderedAt] = useState(() => Date.now());
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -47,6 +49,8 @@ export function ClaimCompanyForm({
 				rcNumber,
 				proofDocumentUrl,
 				message,
+				honeypot,
+				formRenderedAt,
 			});
 
 			if (!res.success) {
@@ -142,6 +146,18 @@ export function ClaimCompanyForm({
 					onChange={(e) => setMessage(e.target.value)}
 					placeholder={`Confirm your authorization to manage ${companyName}'s verified B2B profile and receive buyer RFQ notifications...`}
 					required
+				/>
+			</div>
+
+			<div aria-hidden='true' className='hidden'>
+				<label htmlFor='claim-website-url'>Company Directory URL</label>
+				<input
+					id='claim-website-url'
+					type='text'
+					tabIndex={-1}
+					autoComplete='off'
+					value={honeypot}
+					onChange={(e) => setHoneypot(e.target.value)}
 				/>
 			</div>
 

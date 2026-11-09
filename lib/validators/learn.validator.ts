@@ -37,6 +37,8 @@ export const unlockResourceLeadSchema = z.object({
 	procurementTimeline: z.string().trim().max(80).optional().or(z.literal('')),
 	estimatedBudgetBand: z.string().trim().max(80).optional().or(z.literal('')),
 	deliveryState: z.string().trim().max(60).optional().or(z.literal('')),
+	honeypot: z.string().optional().or(z.literal('')),
+	formRenderedAt: z.union([z.number(), z.string()]).optional(),
 });
 
 export const createKnowledgeResourceSchema = z.object({

@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { UserRole } from '@prisma/client';
 import { guardActionAuth, guardPlatformRole } from '@/lib/auth/guards';
+import { evaluateBotSubmission } from '@/lib/security/bot-check';
+import { consumeRateLimit } from '@/lib/security/rate-limit';
 import {
 	reviewCompanyClaimRequest,
 	submitCompanyClaimRequest,
@@ -29,6 +31,30 @@ export async function submitCompanyClaimAction(
 				message:
 					parsed.error.issues[0]?.message ??
 					'Please complete all verification fields.',
+			};
+		}
+
+		const botCheck = evaluateBotSubmission({
+			honeypot: parsed.data.honeypot,
+			formRenderedAt: parsed.data.formRenderedAt,
+		});
+		if (!botCheck.ok) {
+			return {
+				success: false,
+				message: botCheck.reason ?? 'Submission blocked by spam filter.',
+			};
+		}
+
+		const rate = await consumeRateLimit({
+			key: `company_claim:user:${auth.user.userId}`,
+			limit: 3,
+			windowSeconds: 86400,
+		});
+		if (!rate.allowed) {
+			return {
+				success: false,
+				message:
+					'Daily company claim submission limit (3/day) reached. Please contact verification support if you manage additional entities.',
 			};
 		}
 

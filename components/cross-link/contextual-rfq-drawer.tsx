@@ -96,6 +96,8 @@ export function ContextualRfqDrawer({
 	const [deliveryState, setDeliveryState] = useState('Lagos');
 	const [allowPeerQuotes, setAllowPeerQuotes] = useState(true);
 	const [additionalNotes, setAdditionalNotes] = useState('');
+	const [honeypot, setHoneypot] = useState('');
+	const [formRenderedAt, setFormRenderedAt] = useState(() => Date.now());
 	const [specs, setSpecs] = useState<Record<string, string>>(() => {
 		const defaults: Record<string, string> = {};
 		for (const def of specDefinitions) {
@@ -153,6 +155,8 @@ export function ContextualRfqDrawer({
 				sourceArticleId: sourceArticleId ?? '',
 				targetCompanyId: targetCompanyId ?? '',
 				allowPeerQuotes,
+				honeypot,
+				formRenderedAt,
 			});
 
 			if (!res.success) {
@@ -182,6 +186,7 @@ export function ContextualRfqDrawer({
 	const handleOpenChange = (nextOpen: boolean) => {
 		setOpen(nextOpen);
 		if (nextOpen) {
+			setFormRenderedAt(Date.now());
 			trackB2BEvent('pulse_contextual_rfq_opened', {
 				verticalSlug,
 				categoryId,
@@ -430,6 +435,18 @@ export function ContextualRfqDrawer({
 							value={additionalNotes}
 							onChange={(e) => setAdditionalNotes(e.target.value)}
 							placeholder='Mill test certificate (MTC) required, delivery timeline, offloading terms...'
+						/>
+					</div>
+
+					<div aria-hidden='true' className='hidden'>
+						<label htmlFor='ctx-website-url'>Directory URL</label>
+						<input
+							id='ctx-website-url'
+							type='text'
+							tabIndex={-1}
+							autoComplete='off'
+							value={honeypot}
+							onChange={(e) => setHoneypot(e.target.value)}
 						/>
 					</div>
 

@@ -96,6 +96,8 @@ export function RfqBroadcastForm({
 	const [specs, setSpecs] = useState<Record<string, string>>(
 		draft.specifications
 	);
+	const [honeypot, setHoneypot] = useState('');
+	const [formRenderedAt] = useState(() => Date.now());
 
 	const activeSpecs = specDefinitions.filter(
 		(d) => d.categoryId === categoryId || d.categoryId === null
@@ -143,6 +145,8 @@ export function RfqBroadcastForm({
 				sourceArticleId: draft.sourceArticleId ?? '',
 				targetCompanyId: draft.targetCompanyId ?? '',
 				allowPeerQuotes: true,
+				honeypot,
+				formRenderedAt,
 			});
 
 			if (!res.success) {
@@ -501,6 +505,18 @@ export function RfqBroadcastForm({
 						/>
 					</div>
 				</div>
+			</div>
+
+			<div aria-hidden='true' className='hidden'>
+				<label htmlFor='rfq-website-url'>Company Directory URL</label>
+				<input
+					id='rfq-website-url'
+					type='text'
+					tabIndex={-1}
+					autoComplete='off'
+					value={honeypot}
+					onChange={(e) => setHoneypot(e.target.value)}
+				/>
 			</div>
 
 			<Button

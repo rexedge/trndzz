@@ -143,6 +143,8 @@ export const submitCompanyClaimSchema = z.object({
 		.trim()
 		.min(15, 'Briefly describe your authorization to claim this listing')
 		.max(1000),
+	honeypot: z.string().optional().or(z.literal('')),
+	formRenderedAt: z.union([z.number(), z.string()]).optional(),
 });
 
 export const reviewCompanyClaimSchema = z.object({

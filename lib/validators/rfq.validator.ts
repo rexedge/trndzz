@@ -85,6 +85,8 @@ export const createRfqSchema = z.object({
 	sourceArticleId: z.string().optional().or(z.literal('')),
 	targetCompanyId: z.string().optional().or(z.literal('')),
 	allowPeerQuotes: z.boolean().default(true),
+	honeypot: z.string().optional().or(z.literal('')),
+	formRenderedAt: z.union([z.number(), z.string()]).optional(),
 });
 
 export const submitRfqQuoteSchema = z.object({

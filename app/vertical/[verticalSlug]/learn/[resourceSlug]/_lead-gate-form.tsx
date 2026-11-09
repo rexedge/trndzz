@@ -56,6 +56,8 @@ export function ResourceLeadGateForm({
 	const [estimatedBudgetBand, setEstimatedBudgetBand] =
 		useState('₦25M – ₦100M');
 	const [deliveryState, setDeliveryState] = useState('Lagos');
+	const [honeypot, setHoneypot] = useState('');
+	const [formRenderedAt] = useState(() => Date.now());
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -71,6 +73,8 @@ export function ResourceLeadGateForm({
 				procurementTimeline,
 				estimatedBudgetBand,
 				deliveryState,
+				honeypot,
+				formRenderedAt,
 			});
 
 			if (!res.success || !res.data) {
@@ -262,6 +266,18 @@ export function ResourceLeadGateForm({
 					value={deliveryState}
 					onChange={(e) => setDeliveryState(e.target.value)}
 					placeholder='Lagos'
+				/>
+			</div>
+
+			<div aria-hidden='true' className='hidden'>
+				<label htmlFor='lg-website-url'>Company Directory URL</label>
+				<input
+					id='lg-website-url'
+					type='text'
+					tabIndex={-1}
+					autoComplete='off'
+					value={honeypot}
+					onChange={(e) => setHoneypot(e.target.value)}
 				/>
 			</div>
 

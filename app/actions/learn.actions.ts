@@ -4,6 +4,11 @@ import { UserRole } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, guardPlatformRole } from '@/lib/auth/guards';
+import { evaluateBotSubmission } from '@/lib/security/bot-check';
+import {
+	consumeRateLimit,
+	getRequestClientIp,
+} from '@/lib/security/rate-limit';
 import {
 	captureLeadAndUnlockResource,
 	createKnowledgeResource,
@@ -34,7 +39,34 @@ export async function unlockKnowledgeResourceAction(
 			};
 		}
 
+		const botCheck = evaluateBotSubmission({
+			honeypot: parsed.data.honeypot,
+			formRenderedAt: parsed.data.formRenderedAt,
+		});
+		if (!botCheck.ok) {
+			return {
+				success: false,
+				message: botCheck.reason ?? 'Submission blocked by spam filter.',
+			};
+		}
+
 		const user = await getCurrentUser();
+		const clientIp = await getRequestClientIp();
+		const rateKey = user?.userId
+			? `learn_unlock:user:${user.userId}`
+			: `learn_unlock:ip:${clientIp}`;
+		const rate = await consumeRateLimit({
+			key: rateKey,
+			limit: 10,
+			windowSeconds: 3600,
+		});
+		if (!rate.allowed) {
+			return {
+				success: false,
+				message: `Too many dossier unlock requests. Please wait ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s) and try again.`,
+			};
+		}
+
 		const unlocked = await captureLeadAndUnlockResource(
 			parsed.data,
 			user?.userId
