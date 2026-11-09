@@ -371,6 +371,85 @@ async function main() {
 		});
 	}
 
+	// Spec Definitions for Longspan & Step-Tile Roofing Sheets
+	const roofingSpecs = [
+		{
+			key: 'profile_type',
+			label: 'Sheet / Tile Profile',
+			unit: null,
+			options: [
+				'Longspan Trapezoidal',
+				'Step-Tile Aluminium',
+				'Non-Step Tile Aluminium',
+				'Metcoppo Pan Tile',
+				'Stone-Coated Tile (Gerard — Bond/Classic/Milano/Roman/Shingle/Wood)',
+				'Roofing Accessories (Ridge Caps / PVC Connectors / Fasteners)',
+			],
+			isRequired: true,
+			displayOrder: 1,
+		},
+		{
+			key: 'gauge_mm',
+			label: 'Sheet Gauge / Thickness',
+			unit: 'mm',
+			options: [
+				'0.40',
+				'0.45',
+				'0.50',
+				'0.55',
+				'0.60',
+				'0.65',
+				'0.70',
+				'0.75',
+				'1.00',
+				'Standard (Stone-Coated / Accessories)',
+			],
+			isRequired: true,
+			displayOrder: 2,
+		},
+		{
+			key: 'thickness_standard',
+			label: 'Measurement Standard',
+			unit: null,
+			options: [
+				'Caliper Standard (Full Micrometer Gauge)',
+				'Market Standard',
+				'OEM Authorised Gerard Standard',
+			],
+			isRequired: false,
+			displayOrder: 3,
+		},
+	];
+
+	for (const spec of roofingSpecs) {
+		await prisma.specAttributeDefinition.upsert({
+			where: {
+				verticalId_categoryId_key: {
+					verticalId: aluminiumVertical.id,
+					categoryId: catRoofing.id,
+					key: spec.key,
+				},
+			},
+			update: {
+				label: spec.label,
+				unit: spec.unit,
+				options: spec.options,
+				isRequired: spec.isRequired,
+			},
+			create: {
+				verticalId: aluminiumVertical.id,
+				categoryId: catRoofing.id,
+				key: spec.key,
+				label: spec.label,
+				unit: spec.unit,
+				inputType: SpecInputType.SELECT,
+				options: spec.options,
+				isRequired: spec.isRequired,
+				displayOrder: spec.displayOrder,
+			},
+		});
+	}
+
 	// Spec Definitions for Extrusions
 	const extrusionSpecs = [
 		{
@@ -655,6 +734,97 @@ async function main() {
 		},
 	});
 
+	const ezedoneAluminium = await prisma.company.upsert({
+		where: { slug: 'eze-done-aluminium-concept-lagos' },
+		update: {
+			name: 'Eze Done Aluminium Concept Ltd',
+			tagline:
+				'Building Trust, One Roof at a Time — Factory roll-forming of longspan, step-tile & Metcoppo aluminium roofing sheets and Authorised Gerard stone-coated tile dealer & installer.',
+			description:
+				'Founded in 2013 by Chimuanya Michael Ani and headquartered at 288 Abeokuta Expressway, Pleasure Bus-stop, Iyana-Ipaja, Lagos (RC 7022192). Eze Done Aluminium Concept Ltd manufactures custom-corrugated longspan, step-tile, non-step tile, and Metcoppo aluminium roofing sheets in gauges from 0.40mm to 1.00mm (both caliper and market standards), supplies aluminium coil stock, and serves as an Authorised Gerard Dealer & Certified Gerard Installer for stone-coated roofing tiles (Bond, Classic, Milano, Roman, Shingle, Wood) and roofing accessories (ridge caps, PVC water connectors, fasteners, and sealants) across Nigeria.',
+			businessRoles: [
+				BusinessRole.MANUFACTURER,
+				BusinessRole.FABRICATOR_INSTALLER,
+				BusinessRole.DISTRIBUTOR,
+			],
+			claimStatus: ClaimStatus.CLAIMED,
+			verificationTier: VerificationTier.VERIFIED,
+			headquartersState: 'Lagos',
+			city: 'Iyana-Ipaja',
+			address:
+				'288 Abeokuta Expressway, Pleasure Bus-stop, Iyana-Ipaja, Lagos, Nigeria',
+			coverageStates: [
+				'Lagos',
+				'Ogun',
+				'Oyo',
+				'Ondo',
+				'Osun',
+				'Ekiti',
+				'Abuja FCT',
+				'Rivers',
+				'Delta',
+				'Anambra',
+				'Enugu',
+			],
+			yearEstablished: 2013,
+			employeeCountRange: '25-100',
+			productionCapacity:
+				'Custom Cut-to-Length Roll-Forming (0.40mm–1.00mm) & Container Stock',
+			minimumOrderSummary:
+				'Custom roof schedule or sheet/coil order (Nationwide delivery)',
+			rcNumber: 'RC 7022192',
+			websiteUrl: 'https://www.ezedonealuminium.com',
+			publicEmail: 'ezedonealuminiumconceptlimited@gmail.com',
+			publicPhone: '+2348110639077',
+			whatsappNumber: '+2348162270977',
+			verifiedAt: new Date(),
+		},
+		create: {
+			name: 'Eze Done Aluminium Concept Ltd',
+			slug: 'eze-done-aluminium-concept-lagos',
+			tagline:
+				'Building Trust, One Roof at a Time — Factory roll-forming of longspan, step-tile & Metcoppo aluminium roofing sheets and Authorised Gerard stone-coated tile dealer & installer.',
+			description:
+				'Founded in 2013 by Chimuanya Michael Ani and headquartered at 288 Abeokuta Expressway, Pleasure Bus-stop, Iyana-Ipaja, Lagos (RC 7022192). Eze Done Aluminium Concept Ltd manufactures custom-corrugated longspan, step-tile, non-step tile, and Metcoppo aluminium roofing sheets in gauges from 0.40mm to 1.00mm (both caliper and market standards), supplies aluminium coil stock, and serves as an Authorised Gerard Dealer & Certified Gerard Installer for stone-coated roofing tiles (Bond, Classic, Milano, Roman, Shingle, Wood) and roofing accessories (ridge caps, PVC water connectors, fasteners, and sealants) across Nigeria.',
+			businessRoles: [
+				BusinessRole.MANUFACTURER,
+				BusinessRole.FABRICATOR_INSTALLER,
+				BusinessRole.DISTRIBUTOR,
+			],
+			claimStatus: ClaimStatus.CLAIMED,
+			verificationTier: VerificationTier.VERIFIED,
+			headquartersState: 'Lagos',
+			city: 'Iyana-Ipaja',
+			address:
+				'288 Abeokuta Expressway, Pleasure Bus-stop, Iyana-Ipaja, Lagos, Nigeria',
+			coverageStates: [
+				'Lagos',
+				'Ogun',
+				'Oyo',
+				'Ondo',
+				'Osun',
+				'Ekiti',
+				'Abuja FCT',
+				'Rivers',
+				'Delta',
+				'Anambra',
+				'Enugu',
+			],
+			yearEstablished: 2013,
+			employeeCountRange: '25-100',
+			productionCapacity:
+				'Custom Cut-to-Length Roll-Forming (0.40mm–1.00mm) & Container Stock',
+			minimumOrderSummary:
+				'Custom roof schedule or sheet/coil order (Nationwide delivery)',
+			rcNumber: 'RC 7022192',
+			websiteUrl: 'https://www.ezedonealuminium.com',
+			publicEmail: 'ezedonealuminiumconceptlimited@gmail.com',
+			publicPhone: '+2348110639077',
+			whatsappNumber: '+2348162270977',
+			verifiedAt: new Date(),
+		},
+	});
+
 	// Link companies to Aluminium Vertical, Categories & Certifications
 	const companyVerticalLinks = [
 		{
@@ -682,6 +852,14 @@ async function main() {
 			companyId: northernRoofingUnclaimed.id,
 			streamPositions: [StreamPosition.DOWNSTREAM],
 			categories: [catRoofing.id],
+		},
+		{
+			companyId: ezedoneAluminium.id,
+			streamPositions: [
+				StreamPosition.MIDSTREAM,
+				StreamPosition.DOWNSTREAM,
+			],
+			categories: [catRoofing.id, catCoils.id],
 		},
 	];
 
@@ -741,6 +919,179 @@ async function main() {
 					isVerified: true,
 				},
 			],
+		});
+	}
+
+	const ezedoneCertCount = await prisma.companyCertification.count({
+		where: { companyId: ezedoneAluminium.id },
+	});
+	if (ezedoneCertCount === 0) {
+		await prisma.companyCertification.createMany({
+			data: [
+				{
+					companyId: ezedoneAluminium.id,
+					name: 'CAC Corporate Registration (RC 7022192)',
+					issuer: 'Corporate Affairs Commission (Nigeria)',
+					certificateNumber: 'RC 7022192',
+					isVerified: true,
+				},
+				{
+					companyId: ezedoneAluminium.id,
+					name: 'Authorised Gerard Stone-Coated Roofing Dealer',
+					issuer: 'Gerard Roofing Systems',
+					certificateNumber: 'GERARD-DLR-LAGOS',
+					isVerified: true,
+				},
+				{
+					companyId: ezedoneAluminium.id,
+					name: 'Certified Gerard Roofing Tile Installer',
+					issuer: 'Gerard Roofing Systems',
+					certificateNumber: 'GERARD-INST-LAGOS',
+					isVerified: true,
+				},
+			],
+		});
+	}
+
+	const ezedoneProducts = [
+		{
+			slug: 'ezedone-longspan-aluminium-roofing-sheet-040-075mm',
+			categoryId: catRoofing.id,
+			name: 'Long Span Aluminium Roofing Sheet (0.40mm – 0.75mm Caliper & Market Standard)',
+			description:
+				'Full-length trapezoidal aluminium roofing sheet roll-formed to order at our Iyana-Ipaja, Lagos factory with zero horizontal overlaps. Available in all colours across 0.40mm (₦4,800 market / ₦8,600 caliper), 0.45mm (₦5,850 market / ₦9,200 caliper), 0.50mm (₦6,200 market / ₦10,700 caliper), 0.55mm, 0.60mm (₦10,300 market / ₦13,300 caliper), 0.65mm (₦14,500 caliper), 0.70mm (₦13,700 market / ₦15,600 caliper), and 0.75mm (₦18,200 caliper).',
+			specifications: {
+				profile_type: 'Longspan Trapezoidal',
+				gauge_mm: '0.45',
+				thickness_standard:
+					'Caliper Standard (Full Micrometer Gauge)',
+			},
+			unit: 'sqm',
+			minOrderQty: '50.000',
+			indicativeMin: '4800.0000',
+			indicativeMax: '18200.0000',
+		},
+		{
+			slug: 'ezedone-step-tile-aluminium-roofing-sheet',
+			categoryId: catRoofing.id,
+			name: 'Step Tile Aluminium Roofing Sheet (0.45mm – 0.70mm)',
+			description:
+				'Aluminium sheet pressed into a stepped tile profile at our Iyana-Ipaja plant, delivering the layered architectural look of clay tile roofing at a fraction of the structural weight. Interlocking edges for a tight, weatherproof run in all colours.',
+			specifications: {
+				profile_type: 'Step-Tile Aluminium',
+				gauge_mm: '0.50',
+				thickness_standard:
+					'Caliper Standard (Full Micrometer Gauge)',
+			},
+			unit: 'sqm',
+			minOrderQty: '50.000',
+			indicativeMin: '5850.0000',
+			indicativeMax: '15600.0000',
+		},
+		{
+			slug: 'ezedone-metcoppo-aluminium-roofing-sheet',
+			categoryId: catRoofing.id,
+			name: 'Metcoppo Aluminium Roofing Sheet (0.45mm – 0.70mm)',
+			description:
+				'Aluminium sheet pressed into a repeating grid of rounded pan tiles, giving the profile of classic Roman clay tiling in a single continuous lightweight sheet rolled to rafter length.',
+			specifications: {
+				profile_type: 'Metcoppo Pan Tile',
+				gauge_mm: '0.55',
+				thickness_standard:
+					'Caliper Standard (Full Micrometer Gauge)',
+			},
+			unit: 'sqm',
+			minOrderQty: '50.000',
+			indicativeMin: '6200.0000',
+			indicativeMax: '15600.0000',
+		},
+		{
+			slug: 'ezedone-non-step-tile-aluminium-roofing-sheet',
+			categoryId: catRoofing.id,
+			name: 'Non-Step Tile Aluminium Roofing Sheet (0.45mm – 0.70mm)',
+			description:
+				'The step-tile rib profile rolled without horizontal step pressing, producing an unbroken rib run from ridge to eaves for residential, commercial, and institutional buildings.',
+			specifications: {
+				profile_type: 'Non-Step Tile Aluminium',
+				gauge_mm: '0.45',
+				thickness_standard:
+					'Caliper Standard (Full Micrometer Gauge)',
+			},
+			unit: 'sqm',
+			minOrderQty: '50.000',
+			indicativeMin: '5850.0000',
+			indicativeMax: '15600.0000',
+		},
+		{
+			slug: 'ezedone-gerard-stone-coated-roofing-tiles-all-profiles',
+			categoryId: catRoofing.id,
+			name: 'Gerard Stone-Coated Roofing Tiles (Bond, Classic, Milano, Roman, Shingle & Wood)',
+			description:
+				'Genuine stone-granule-coated steel roofing tiles supplied and installed under Eze Done’s Authorised Gerard Dealership. Available in Bond, Classic, Milano, Roman, Shingle, Wood, and Flat Sheet profiles across all colours at uniform factory-direct pricing.',
+			specifications: {
+				profile_type:
+					'Stone-Coated Tile (Gerard — Bond/Classic/Milano/Roman/Shingle/Wood)',
+				gauge_mm: 'Standard (Stone-Coated / Accessories)',
+				thickness_standard: 'OEM Authorised Gerard Standard',
+			},
+			unit: 'sheet',
+			minOrderQty: '50.000',
+			indicativeMin: '4600.0000',
+			indicativeMax: '4600.0000',
+		},
+		{
+			slug: 'ezedone-ridge-caps-pvc-water-connectors-accessories',
+			categoryId: catRoofing.id,
+			name: 'Colour-Matched 0.55mm Ridge Caps, PVC Water Connectors & Roofing Fasteners',
+			description:
+				'Complete roof finishing & drainage package: formed 0.55mm colour-matched ridge caps, full PVC rainwater gutter/pipe/collector systems (elbows, hangers, tornado diverters), ring-shank stone-coated tile nails (₦8,500/pack), self-drilling screws, and weatherproofing sealants (₦8,500–₦10,500/set).',
+			specifications: {
+				profile_type:
+					'Roofing Accessories (Ridge Caps / PVC Connectors / Fasteners)',
+				gauge_mm: '0.55',
+				thickness_standard:
+					'Caliper Standard (Full Micrometer Gauge)',
+			},
+			unit: 'piece',
+			minOrderQty: '10.000',
+			indicativeMin: '4600.0000',
+			indicativeMax: '10500.0000',
+		},
+	];
+
+	for (const prod of ezedoneProducts) {
+		await prisma.companyProduct.upsert({
+			where: {
+				companyId_slug: {
+					companyId: ezedoneAluminium.id,
+					slug: prod.slug,
+				},
+			},
+			update: {
+				name: prod.name,
+				description: prod.description,
+				specifications: prod.specifications,
+				unit: prod.unit,
+				minOrderQty: prod.minOrderQty,
+				indicativeMin: prod.indicativeMin,
+				indicativeMax: prod.indicativeMax,
+				datasheetUrl: `/api/documents/datasheet/${prod.slug}`,
+			},
+			create: {
+				companyId: ezedoneAluminium.id,
+				verticalId: aluminiumVertical.id,
+				categoryId: prod.categoryId,
+				name: prod.name,
+				slug: prod.slug,
+				description: prod.description,
+				specifications: prod.specifications,
+				unit: prod.unit,
+				minOrderQty: prod.minOrderQty,
+				indicativeMin: prod.indicativeMin,
+				indicativeMax: prod.indicativeMax,
+				currency: 'NGN',
+				datasheetUrl: `/api/documents/datasheet/${prod.slug}`,
+			},
 		});
 	}
 
@@ -914,6 +1265,23 @@ async function main() {
 			companyId: atlanticCoilsUnclaimed.id,
 			contextLabel: 'Lagos Bonded Coil Importer',
 			displayOrder: 2,
+		},
+	});
+
+	await prisma.articleCompanyMention.upsert({
+		where: {
+			articleId_companyId: {
+				articleId: article1.id,
+				companyId: ezedoneAluminium.id,
+			},
+		},
+		update: {},
+		create: {
+			articleId: article1.id,
+			companyId: ezedoneAluminium.id,
+			contextLabel:
+				'Verified Caliper-Gauge Roll-Former & Gerard Tile Dealer (Lagos)',
+			displayOrder: 3,
 		},
 	});
 
