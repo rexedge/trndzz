@@ -69,9 +69,19 @@ function wrapIndustrialEmailHtml(params: {
 </html>`;
 }
 
-export async function sendTransactionalNotification(
-	payload: DispatchPayload
-): Promise<void> {
+async function deliverNotificationViaProviders(payload: {
+	type: NotificationType;
+	recipientEmail: string;
+	recipientPhone?: string | null;
+	subject: string;
+	textBody: string;
+	htmlBody: string;
+	actionUrl: string;
+}): Promise<{
+	status: NotificationStatus;
+	providerMessageId: string | null;
+	errorMessage: string | null;
+}> {
 	const resendKey = process.env.RESEND_API_KEY?.trim();
 	const fromAddress =
 		process.env.EMAIL_FROM?.trim() ||
@@ -133,6 +143,15 @@ export async function sendTransactionalNotification(
 		}).catch(() => null);
 	}
 
+	return { status, providerMessageId, errorMessage };
+}
+
+export async function sendTransactionalNotification(
+	payload: DispatchPayload
+): Promise<void> {
+	const { status, providerMessageId, errorMessage } =
+		await deliverNotificationViaProviders(payload);
+
 	if (prisma.notificationDispatch) {
 		await prisma.notificationDispatch
 			.create({
@@ -143,15 +162,85 @@ export async function sendTransactionalNotification(
 					recipientPhone: payload.recipientPhone ?? null,
 					subject: payload.subject,
 					bodyPreview: payload.textBody.slice(0, 1200),
+					textBody: payload.textBody,
+					htmlBody: payload.htmlBody,
 					actionUrl: payload.actionUrl,
 					companyId: payload.companyId ?? null,
 					rfqId: payload.rfqId ?? null,
 					providerMessageId,
 					errorMessage,
+					attemptCount: 1,
+					lastAttemptAt: new Date(),
 				},
 			})
 			.catch(() => null);
 	}
+}
+
+export const MAX_NOTIFICATION_RETRY_ATTEMPTS = 5;
+
+export async function retryNotificationDispatchById(dispatchId: string): Promise<{
+	id: string;
+	status: NotificationStatus;
+	attemptCount: number;
+	errorMessage: string | null;
+}> {
+	const existing = await prisma.notificationDispatch.findUnique({
+		where: { id: dispatchId },
+	});
+
+	if (!existing) {
+		throw new Error('Notification record not found.');
+	}
+
+	if (existing.status === NotificationStatus.SENT) {
+		throw new Error('This notification has already been delivered.');
+	}
+
+	if (existing.attemptCount >= MAX_NOTIFICATION_RETRY_ATTEMPTS) {
+		throw new Error(
+			`Maximum retry limit (${MAX_NOTIFICATION_RETRY_ATTEMPTS} attempts) reached for this alert.`
+		);
+	}
+
+	const textBody = existing.textBody || existing.bodyPreview;
+	const htmlBody =
+		existing.htmlBody ||
+		wrapIndustrialEmailHtml({
+			eyebrow: existing.type.replace(/_/g, ' '),
+			heading: existing.subject,
+			paragraphs: textBody.split('\n\n').filter(Boolean),
+			ctaLabel: 'Open in Trndzz →',
+			ctaUrl: existing.actionUrl,
+		});
+
+	const delivery = await deliverNotificationViaProviders({
+		type: existing.type,
+		recipientEmail: existing.recipientEmail,
+		recipientPhone: existing.recipientPhone,
+		subject: existing.subject,
+		textBody,
+		htmlBody,
+		actionUrl: existing.actionUrl,
+	});
+
+	const updated = await prisma.notificationDispatch.update({
+		where: { id: existing.id },
+		data: {
+			status: delivery.status,
+			providerMessageId: delivery.providerMessageId,
+			errorMessage: delivery.errorMessage,
+			attemptCount: { increment: 1 },
+			lastAttemptAt: new Date(),
+		},
+	});
+
+	return {
+		id: updated.id,
+		status: updated.status,
+		attemptCount: updated.attemptCount,
+		errorMessage: updated.errorMessage,
+	};
 }
 
 export async function dispatchRfqBroadcastAlerts(params: {

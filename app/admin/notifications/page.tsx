@@ -12,6 +12,7 @@ import {
 import { requirePlatformStaff } from '@/lib/auth/guards';
 import { listAdminNotificationOutbox } from '@/lib/services/notification.service';
 import { formatDate, formatNumber } from '@/lib/utils/format';
+import { RetryNotificationButton } from './_retry-button';
 
 function statusBadgeVariant(
 	status: NotificationStatus
@@ -242,14 +243,28 @@ export default async function AdminNotificationsOutboxPage() {
 										)}
 									</TableCell>
 									<TableCell>
-										<Badge
-											variant={statusBadgeVariant(
-												row.status
+										<div className='flex flex-col items-start gap-1.5'>
+											<Badge
+												variant={statusBadgeVariant(
+													row.status
+												)}
+												className='font-tabular text-[11px]'
+											>
+												{row.status}
+											</Badge>
+											<span className='font-tabular text-[10px] text-muted-foreground'>
+												Attempt #{row.attemptCount ?? 1}
+											</span>
+											{row.status ===
+												NotificationStatus.FAILED && (
+												<RetryNotificationButton
+													dispatchId={row.id}
+													attemptCount={
+														row.attemptCount ?? 1
+													}
+												/>
 											)}
-											className='font-tabular text-[11px]'
-										>
-											{row.status}
-										</Badge>
+										</div>
 									</TableCell>
 									<TableCell className='text-right'>
 										{row.actionUrl ? (
