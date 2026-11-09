@@ -69,6 +69,15 @@
 
 ---
 
+## Horizon 1 — Phase 4: Pre-Launch Hardening & Test Suite
+- [x] Collision-safe RFQ reference number allocation via atomic `RfqSequence` per-vertical counter (`lib/utils/rfq-reference.ts`)
+- [x] Serverless database-backed rate limiting (`RateLimitBucket`, `lib/security/rate-limit.ts`) + honeypot and minimum fill-time bot defense (`lib/security/bot-check.ts`) across public & authenticated B2B forms
+- [x] Production auth secret enforcement and dynamic staging `trustedOrigins` in `lib/auth/auth.ts`
+- [x] Full-body storage (`textBody`, `htmlBody`, `attemptCount`) and admin retry action (`retryNotificationDispatchAction`) for failed outbox alerts
+- [x] Automated unit test suite (`tests/hardening.test.ts` via `pnpm test`) covering RFQ references, RFC-4180 CSV parsing, multi-tenant URL routing, supplier matching scores, dynamic spec validation, and rate-limit/bot-check math
+
+---
+
 ## Horizon 2 & 3 — Scale, Monetization & Transactional Trade (Future)
 - [ ] Automated Vendor SaaS billing (`VERIFIED_PRO` & `ENTERPRISE_SPONSOR` tiers via Paystack/Flutterwave) + vendor lead/impression analytics
 - [ ] Assisted Trade concierge desk & analyst-verified high-value RFQ workflows
